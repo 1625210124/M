@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Özel Video & Fotoğraf Paneli</title>
+    <style>
+        /* GENEL VE HAREKETLİ ARKA PLAN */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(270deg, #000000, #1a1a1a, #2c2c2c, #121212);
+            background-size: 800% 800%;
+            animation: dalgalanma 12s ease infinite;
+            color: white;
+        }
+
+        @keyframes dalgalanma {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* GİRİŞ EKRANI TASARIMI */
+        #login-container {
+            text-align: center;
+            background: rgba(30, 30, 30, 0.85);
+            padding: 35px;
+            border-radius: 25px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 320px;
+            z-index: 10;
+        }
+
+        .pin-display {
+            width: 100%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #444;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-size: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            letter-spacing: 8px;
+        }
+
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        
+        .num-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            font-size: 22px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .num-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+        .action-btn { background: #444; grid-column: span 2; font-weight: bold; }
+        .clear-btn { background: rgba(217, 83, 79, 0.2); color: #ff6b6b; }
+
+        /* ANA PANEL TASARIMI */
+        #main-panel {
+            display: none;
+            text-align: center;
+            width: 95%;
+            max-width: 500px;
+            z-index: 100;
+        }
+
+        .menu-card {
+            background: rgba(40, 40, 40, 0.9);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .option-btn {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            margin: 12px 0;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: white;
+        }
+
+        .content-area {
+            display: none;
+            margin-top: 20px;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+
+        iframe { border: none; border-radius: 15px; background: #000; }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-container">
+        <h2 style="font-weight: 300; letter-spacing: 2px;">GÜVENLİ GİRİŞ</h2>
+        <div id="display" class="pin-display"></div>
+        <div class="numpad">
+            <button class="num-btn" onclick="addNum('1')">1</button>
+            <button class="num-btn" onclick="addNum('2')">2</button>
+            <button class="num-btn" onclick="addNum('3')">3</button>
+            <button class="num-btn" onclick="addNum('4')">4</button>
+            <button class="num-btn" onclick="addNum('5')">5</button>
+            <button class="num-btn" onclick="addNum('6')">6</button>
+            <button class="num-btn" onclick="addNum('7')">7</button>
+            <button class="num-btn" onclick="addNum('8')">8</button>
+            <button class="num-btn" onclick="addNum('9')">9</button>
+            <button class="num-btn clear-btn" onclick="clearPin()">C</button>
+            <button class="num-btn" onclick="addNum('0')">0</button>
+            <button class="num-btn action-btn" onclick="checkPin()">ONAYLA</button>
+        </div>
+        <p id="error-msg" style="color: #ff4d4d; display: none; margin-top: 10px;">Hatalı PIN!</p>
+    </div>
+
+    <div id="main-panel">
+        <div class="menu-card">
+            <h1 style="font-weight: 300; margin-bottom: 5px;">Hoş Geldin</h1>
+            <p style="color: #aaa; margin-bottom: 25px;">İçeriklere göz atabilirsin</p>
+            
+            <button class="option-btn" onclick="showSection('video-section')">🎬 Videoları İzle</button>
+            <button class="option-btn" onclick="showSection('photo-section')">🖼️ Fotoğraflara Bak</button>
+
+            <div id="video-section" class="content-area">
+                <hr style="border: 0.5px solid #444; margin: 20px 0;">
+                <h3 style="font-weight: 300;">🎬 Video Oynatılıyor</h3>
+                <iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview" width="100%" height="300" allowfullscreen></iframe>
+                <button class="close-btn" onclick="hideSections()">✖ Bölümü Kapat</button>
+            </div>
+
+            <div id="photo-section" class="content-area">
+                <hr style="border: 0.5px solid #444; margin: 20px 0;">
+                <h3 style="font-weight: 300;">🖼️ Fotoğraf Arşivi</h3>
+                <p style="color: #888;">(Fotoğraf eklemek için ID kullanabilirsin)</p>
+                <button class="close-btn" onclick="hideSections()">✖ Bölümü Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPin = "";
+        const correctPin = "1625210124";
+
+        function addNum(num) {
+            if (currentPin.length < 10) {
+                document.getElementById("error-msg").style.display = "none";
+                currentPin += num;
+                document.getElementById("display").innerText = "*".repeat(currentPin.length);
+            }
+        }
+
+        function clearPin() {
+            currentPin = "";
+            document.getElementById("display").innerText = "";
+        }
+
+        function checkPin() {
+            if (currentPin === correctPin) {
+                document.getElementById("login-container").style.display = "none";
+                document.getElementById("main-panel").style.display = "block";
+            } else {
+                document.getElementById("error-msg").style.display = "block";
+                clearPin();
+            }
+        }
+
+        function showSection(id) {
+            hideSections();
+            document.getElementById(id).style.display = "block";
+        }
+
+        function hideSections() {
+            document.getElementById('video-section').style.display = "none";
+            document.getElementById('photo-section').style.display = "none";
+        }
+    </script>
+</body>
+</html>
