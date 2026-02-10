@@ -28,11 +28,11 @@
         .add-btn { background: #28a745; color: white; font-size: 14px; }
         .register-btn { background: #444; color: white; }
         .user-card { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .user-info { flex-grow: 1; cursor: pointer; text-align: left; }
         .hidden { display: none !important; }
         iframe { width: 100%; height: 350px; border-radius: 15px; border: none; margin-top: 15px; background: #000; }
-        .delete-small { background: #ff4d4d; border: none; color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 10px; }
+        .delete-small { background: #ff4d4d; border: none; color: white; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 10px; }
         
-        /* DUYURU VE ADMIN SATIRI STİLLERİ */
         .announcement-box { margin-top: 20px; padding: 15px; border: 1px solid #7d2ae8; border-radius: 15px; background: rgba(125, 42, 232, 0.1); }
         .announcement-text { font-size: 14px; color: #eee; font-style: italic; }
         .admin-line { margin-top: 10px; font-size: 11px; color: #777; letter-spacing: 1px; }
@@ -52,7 +52,7 @@
         <div id="info-section" class="hidden">
             <div class="announcement-box">
                 <p style="font-size: 10px; color: #7d2ae8; margin: 0 0 5px 0; font-weight: bold;">DUYURU</p>
-                <div id="display-announcement" class="announcement-text">Yükleniyor...</div>
+                <div id="display-announcement" class="announcement-text">...</div>
             </div>
             <div id="display-admin-line" class="admin-line"></div>
         </div>
@@ -63,8 +63,8 @@
         
         <div style="background: rgba(125, 42, 232, 0.15); padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #7d2ae8;">
             <p style="font-size:12px; margin:0 0 10px 0; color:#fff;">PANEL YÖNETİMİ</p>
-            <input type="text" id="input-announcement" placeholder="Duyuru metni yaz...">
-            <input type="text" id="input-admin-line" placeholder="Admin satırı (Instagram vb.)">
+            <input type="text" id="input-announcement" placeholder="Duyuru metni...">
+            <input type="text" id="input-admin-line" placeholder="Admin satırı...">
             <button class="btn login-btn" onclick="updateInfo()">Bilgileri Güncelle</button>
         </div>
 
@@ -75,8 +75,12 @@
             <button class="btn add-btn" onclick="addNewContent()">Gönder</button>
         </div>
 
+        <p style="font-size:12px; color:#888;">KULLANICILAR</p>
         <div id="user-list"></div>
-        <div id="admin-preview-area" style="margin-top:20px;"></div>
+        
+        <p style="font-size:12px; color:#888; margin-top:20px;">YÜKLÜ İÇERİKLER</p>
+        <div id="admin-preview-area"></div>
+        
         <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Çıkış</button>
     </div>
 
@@ -109,14 +113,12 @@
         let currentEditingUser = "";
         let allContents = {};
 
-        // DUYURU VE ADMIN SATIRINI CANLI DİNLE
         db.ref('site_info').on('value', s => {
             const data = s.val();
             if(data) {
                 document.getElementById('display-announcement').innerText = data.announcement || "Duyuru yok.";
                 document.getElementById('display-admin-line').innerText = data.admin_line || "";
                 document.getElementById('info-section').classList.remove('hidden');
-                // Admin inputlarını da doldur (paneldeyse kolaylık olsun)
                 if(document.getElementById('input-announcement')) {
                     document.getElementById('input-announcement').value = data.announcement || "";
                     document.getElementById('input-admin-line').value = data.admin_line || "";
@@ -127,8 +129,7 @@
         function updateInfo() {
             const ann = document.getElementById('input-announcement').value;
             const line = document.getElementById('input-admin-line').value;
-            db.ref('site_info').set({ announcement: ann, admin_line: line })
-            .then(() => alert("Bilgiler güncellendi!"));
+            db.ref('site_info').set({ announcement: ann, admin_line: line }).then(() => alert("Güncellendi!"));
         }
 
         function cleanDriveLink(url) {
@@ -148,6 +149,10 @@
             if(confirm("Silinsin mi?")) db.ref('contents/' + id).remove();
         }
 
+        function deleteUser(username) {
+            if(confirm(username + " silinsin mi?")) db.ref('users/' + username).remove();
+        }
+
         function loadAdminPanel() {
             showView('admin-panel');
             db.ref('contents').on('value', s => {
@@ -165,8 +170,13 @@
                 const uList = document.getElementById('user-list');
                 uList.innerHTML = "";
                 for(let u in users) {
-                    uList.innerHTML += `<div class="user-card" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
-                        <strong>${u === "Misafir_Giris" ? "⭐ GENEL MİSAFİR" : u}</strong></div>`;
+                    uList.innerHTML += `
+                        <div class="user-card">
+                            <div class="user-info" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
+                                <strong>${u === "Misafir_Giris" ? "⭐ GENEL MİSAFİR" : u}</strong>
+                            </div>
+                            ${u !== "Misafir_Giris" ? `<button class="delete-small" onclick="deleteUser('${u}')">SİL</button>` : ''}
+                        </div>`;
                 }
             });
         }
@@ -203,7 +213,7 @@
         function handleRegister() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
-            if(!user || !pass || user === "Muart") return;
+            if(!user || !pass || user === "Muart" || user === "Misafir_Giris") return;
             db.ref('users/' + user).set({ password: pass, perms: {} }).then(() => alert("Kayıt başarılı!"));
         }
 
@@ -222,7 +232,7 @@
                 for(let id in contents) {
                     if(perms && perms[id]) { area.innerHTML += `<iframe src="${contents[id].link}"></iframe>`; found = true; }
                 }
-                if(!found) area.innerHTML = "<p style='color:#888; padding:50px;'>Duyuruyu kontrol edin veya adminden izin bekleyin.</p>";
+                if(!found) area.innerHTML = "<p style='color:#888; padding:50px;'>Adminden izin bekleyin.</p>";
             });
         }
 
@@ -230,4 +240,5 @@
         function showView(id) { document.querySelectorAll('.container').forEach(c => c.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
     </script>
 </body>
-</html>
+        </html>
+        
