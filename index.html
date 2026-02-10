@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Muart Hub</title>
+    <title>Muart Hub - Pro</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -18,30 +18,19 @@
         .container {
             background: rgba(30, 30, 30, 0.95); padding: 25px; border-radius: 20px;
             backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1);
-            width: 350px; text-align: center; box-shadow: 0 15px 45px rgba(0,0,0,0.8); margin-top: 5vh;
+            width: 380px; text-align: center; box-shadow: 0 15px 45px rgba(0,0,0,0.8); margin-top: 5vh;
         }
-        .main-title { font-weight: 300; letter-spacing: 3px; color: #fff; margin-bottom: 25px; text-transform: uppercase; }
+        .main-title { font-weight: 300; letter-spacing: 3px; color: #fff; margin-bottom: 20px; text-transform: uppercase; }
         .main-title span { color: #7d2ae8; font-weight: bold; }
-        
-        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #444; background: rgba(0,0,0,0.3); color: white; outline: none; }
+        input, select { width: 90%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: rgba(0,0,0,0.3); color: white; outline: none; }
         .btn { width: 95%; padding: 12px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .login-btn { background: #7d2ae8; color: white; }
+        .add-btn { background: #28a745; color: white; font-size: 14px; }
         .register-btn { background: #444; color: white; }
-        .guest-link { display: block; margin-top: 15px; color: #888; text-decoration: none; font-size: 13px; cursor: pointer; }
-        .guest-link:hover { color: #7d2ae8; }
-        
-        .user-card {
-            background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px;
-            margin-bottom: 10px; text-align: left; border: 1px solid #333;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .user-info { flex-grow: 1; cursor: pointer; }
-        .delete-btn { background: #ff4d4d; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; margin-left: 10px; }
-        
+        .user-card { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .hidden { display: none !important; }
-        iframe { width: 100%; height: 380px; border-radius: 15px; border: none; margin-top: 15px; background: #000; }
-        label { display: block; margin: 15px 0; text-align: left; cursor: pointer; }
-        input[type="checkbox"] { width: 18px; height: 18px; vertical-align: middle; margin-right: 10px; }
+        iframe { width: 100%; height: 350px; border-radius: 15px; border: none; margin-top: 15px; background: #000; }
+        .delete-small { background: #ff4d4d; border: none; color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 10px; }
     </style>
 </head>
 <body>
@@ -52,35 +41,42 @@
         <input type="password" id="password" placeholder="Şifre">
         <button class="btn login-btn" onclick="handleLogin()">Giriş Yap</button>
         <button class="btn register-btn" onclick="handleRegister()">Yeni Kayıt</button>
-        <span class="guest-link" onclick="loginAsGuest()">Misafir Olarak Devam Et</span>
-        <p id="auth-msg" style="font-size: 12px; color: #ff6b6b;"></p>
+        <p onclick="loginAsGuest()" style="cursor:pointer; color:#888; font-size:12px; margin-top:10px;">Misafir Girişi</p>
+        <p id="auth-msg" style="color: #ff6b6b; font-size: 12px;"></p>
     </div>
 
-    <div id="admin-panel" class="container hidden" style="width: 420px;">
+    <div id="admin-panel" class="container hidden" style="width: 450px;">
         <h2 class="main-title">ADMIN <span>HUB</span></h2>
+        
+        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+            <p style="font-size:12px; margin:0 0 10px 0; color:#7d2ae8;">YENİ İÇERİK EKLE</p>
+            <input type="text" id="new-content-name" placeholder="İçerik Adı (Örn: Tatil Foto)">
+            <input type="text" id="new-content-link" placeholder="Google Drive Linki">
+            <button class="btn add-btn" onclick="addNewContent()">Sisteme Yükle</button>
+        </div>
+
         <div id="user-list"></div>
-        <hr style="border: 0.5px solid #444; margin: 20px 0;">
-        <p style="font-size: 12px; color: #888;">TÜM İÇERİKLER (ADMİN ÖNİZLEME)</p>
-        <div id="admin-preview-content"></div>
-        <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Çıkış</button>
+        <hr style="border:0.5px solid #444;">
+        <p style="font-size:12px; color:#888;">İÇERİKLERİ YÖNET</p>
+        <div id="content-list-admin"></div>
+        <button class="btn register-btn" onclick="location.reload()">Çıkış</button>
     </div>
 
-    <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100; border: 2px solid #7d2ae8; top: 50%; left: 50%; transform: translate(-50%, -50%); margin-top: 0;">
-        <h3 id="editing-user-name">Yetki Düzenle</h3>
-        <label><input type="checkbox" id="perm-p1"> Fotoğraf 1</label>
-        <label><input type="checkbox" id="perm-p2"> Fotoğraf 2</label>
-        <label><input type="checkbox" id="perm-v1"> Video</label>
+    <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100; border:2px solid #7d2ae8; top:50%; left:50%; transform:translate(-50%, -50%);">
+        <h3 id="editing-user-name">Yetkiler</h3>
+        <div id="permissions-list" style="text-align:left; max-height:200px; overflow-y:auto;"></div>
         <button class="btn login-btn" onclick="savePermissions()">Kaydet</button>
         <button class="btn register-btn" onclick="closeEdit()">Kapat</button>
     </div>
 
-    <div id="user-panel" class="container hidden" style="width: 95%; max-width: 550px;">
+    <div id="user-panel" class="container hidden" style="width: 95%; max-width: 600px;">
         <h2 id="u-welcome" class="main-title">MUART <span>HUB</span></h2>
-        <div id="user-content"></div>
-        <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Çıkış Yap</button>
+        <div id="user-content-area"></div>
+        <button class="btn register-btn" onclick="location.reload()">Çıkış Yap</button>
     </div>
 
     <script>
+        // FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyAKy91n0Ib-Em_YDwwy8odQnrVXq5QFmqA",
             authDomain: "website-6bc19.firebaseapp.com",
@@ -94,111 +90,123 @@
         const db = firebase.database();
 
         let currentEditingUser = "";
+        let allContents = {};
 
-        // Misafir hesabını otomatik oluştur/kontrol et
-        function checkGuestAccount() {
-            db.ref('users/Misafir_Giris').once('value').then(s => {
-                if(!s.exists()) {
-                    db.ref('users/Misafir_Giris').set({ password: "---", perms: {p1:false, p2:false, v1:false} });
+        // Drive linkini temizleme fonksiyonu
+        function cleanDriveLink(url) {
+            const match = url.match(/\/d\/(.+?)\//);
+            return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
+        }
+
+        // --- ADMİN FONKSİYONLARI ---
+        function addNewContent() {
+            const name = document.getElementById('new-content-name').value;
+            const link = document.getElementById('new-content-link').value;
+            if(!name || !link) return alert("Bilgileri doldur!");
+            
+            const newId = "item_" + Date.now();
+            db.ref('contents/' + newId).set({ name: name, link: cleanDriveLink(link) })
+            .then(() => {
+                document.getElementById('new-content-name').value = "";
+                document.getElementById('new-content-link').value = "";
+                alert("Başarıyla eklendi!");
+            });
+        }
+
+        function deleteContent(id) {
+            if(confirm("Bu içeriği sistemden silmek istiyor musun?")) db.ref('contents/' + id).remove();
+        }
+
+        function loadAdminPanel() {
+            showView('admin-panel');
+            // İçerikleri Listele
+            db.ref('contents').on('value', s => {
+                allContents = s.val() || {};
+                const list = document.getElementById('content-list-admin');
+                list.innerHTML = "";
+                for(let id in allContents) {
+                    list.innerHTML += `<div class="user-card"><span>${allContents[id].name}</span><button class="delete-small" onclick="deleteContent('${id}')">SİL</button></div>`;
+                }
+            });
+            // Kullanıcıları Listele
+            db.ref('users').on('value', s => {
+                const users = s.val();
+                const uList = document.getElementById('user-list');
+                uList.innerHTML = "";
+                for(let u in users) {
+                    uList.innerHTML += `<div class="user-card" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
+                        <strong>${u === "Misafir_Giris" ? "⭐ GENEL MİSAFİR" : u}</strong>
+                    </div>`;
                 }
             });
         }
-        checkGuestAccount();
 
+        function openEdit(username, perms) {
+            currentEditingUser = username;
+            document.getElementById('editing-user-name').innerText = username;
+            const pList = document.getElementById('permissions-list');
+            pList.innerHTML = "";
+            for(let id in allContents) {
+                const checked = (perms && perms[id]) ? "checked" : "";
+                pList.innerHTML += `<label style="display:block; margin:10px;"><input type="checkbox" class="perm-check" data-id="${id}" ${checked}> ${allContents[id].name}</label>`;
+            }
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function savePermissions() {
+            let newPerms = {};
+            document.querySelectorAll('.perm-check').forEach(cb => {
+                newPerms[cb.getAttribute('data-id')] = cb.checked;
+            });
+            db.ref('users/' + currentEditingUser + '/perms').set(newPerms).then(() => {
+                closeEdit(); alert("Yetkiler Kaydedildi!");
+            });
+        }
+
+        // --- GİRİŞ VE KULLANICI FONKSİYONLARI ---
         function handleLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
-            if(user === "Muart" && pass === "162124") { loadAdminPanel(); return; }
-            db.ref('users/' + user).once('value').then((s) => {
+            if(user === "Muart" && pass === "162124") return loadAdminPanel();
+            db.ref('users/' + user).once('value').then(s => {
                 const ud = s.val();
                 if(ud && ud.password === pass) loadUserPanel(user, ud.perms);
-                else document.getElementById('auth-msg').innerText = "Hatalı Giriş!";
+                else alert("Hatalı giriş!");
             });
         }
 
         function handleRegister() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
-            if(user === "Muart" || user === "" || user === "Misafir_Giris") { alert("Geçersiz isim!"); return; }
-            db.ref('users/' + user).set({ password: pass, perms: { p1: false, p2: false, v1: false } })
-            .then(() => alert("Kayıt başarılı! Muart'ın onayını bekle."));
+            if(!user || !pass || user === "Muart") return;
+            db.ref('users/' + user).set({ password: pass, perms: {} }).then(() => alert("Kayıt başarılı! Admin onayı bekle."));
         }
 
         function loginAsGuest() {
-            db.ref('users/Misafir_Giris/perms').once('value').then(s => {
-                loadUserPanel("Misafir", s.val());
-            });
+            db.ref('users/Misafir_Giris/perms').once('value').then(s => loadUserPanel("Misafir", s.val()));
         }
-
-        function loadAdminPanel() {
-            showView('admin-panel');
-            db.ref('users').on('value', (s) => {
-                const users = s.val();
-                const list = document.getElementById('user-list');
-                list.innerHTML = "";
-                for(let u in users) {
-                    const card = document.createElement('div');
-                    card.className = "user-card";
-                    card.innerHTML = `
-                        <div class="user-info" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
-                            <strong>${u === "Misafir_Giris" ? "⭐ GENEL MİSAFİR" : u}</strong>
-                        </div>
-                        ${u !== "Misafir_Giris" ? `<button class="delete-btn" onclick="deleteUser('${u}')">SİL</button>` : ''}
-                    `;
-                    list.appendChild(card);
-                }
-            });
-            document.getElementById('admin-preview-content').innerHTML = `
-                <iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>
-                <iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>
-                <iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>
-            `;
-        }
-
-        function deleteUser(username) {
-            if(confirm(username + " silinsin mi?")) db.ref('users/' + username).remove();
-        }
-
-        function openEdit(username, perms) {
-            currentEditingUser = username;
-            document.getElementById('editing-user-name').innerText = (username === "Misafir_Giris" ? "Genel Misafir" : username) + " Yetkileri";
-            document.getElementById('perm-p1').checked = perms ? perms.p1 : false;
-            document.getElementById('perm-p2').checked = perms ? perms.p2 : false;
-            document.getElementById('perm-v1').checked = perms ? perms.v1 : false;
-            document.getElementById('edit-modal').classList.remove('hidden');
-        }
-
-        function savePermissions() {
-            const newPerms = {
-                p1: document.getElementById('perm-p1').checked,
-                p2: document.getElementById('perm-p2').checked,
-                v1: document.getElementById('perm-v1').checked
-            };
-            db.ref('users/' + currentEditingUser + '/perms').set(newPerms)
-            .then(() => { closeEdit(); alert("Yetkiler güncellendi!"); });
-        }
-
-        function closeEdit() { document.getElementById('edit-modal').classList.add('hidden'); }
 
         function loadUserPanel(name, perms) {
             showView('user-panel');
             document.getElementById('u-welcome').innerHTML = `SELAM, <span>${name.toUpperCase()}</span>`;
-            const content = document.getElementById('user-content');
-            content.innerHTML = "";
-            let hasPerm = false;
-            if(perms && perms.p1) { content.innerHTML += '<iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>'; hasPerm = true; }
-            if(perms && perms.p2) { content.innerHTML += '<iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>'; hasPerm = true; }
-            if(perms && perms.v1) { content.innerHTML += '<iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>'; hasPerm = true; }
+            const area = document.getElementById('user-content-area');
+            area.innerHTML = "";
             
-            if(!hasPerm) {
-                content.innerHTML = "<p style='padding:40px; color:#888;'>İçerikleri görmek için lütfen adminden izin bekleyin.</p>";
-            }
+            db.ref('contents').once('value').then(s => {
+                const contents = s.val();
+                let found = false;
+                for(let id in contents) {
+                    if(perms && perms[id]) {
+                        area.innerHTML += `<iframe src="${contents[id].link}"></iframe>`;
+                        found = true;
+                    }
+                }
+                if(!found) area.innerHTML = "<p style='color:#888; padding:50px;'>Görüntülenecek içerik yok. Adminden yetki isteyin.</p>";
+            });
         }
 
-        function showView(id) {
-            document.querySelectorAll('.container').forEach(c => c.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        }
+        function closeEdit() { document.getElementById('edit-modal').classList.add('hidden'); }
+        function showView(id) { document.querySelectorAll('.container').forEach(c => c.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
     </script>
 </body>
     </html>
