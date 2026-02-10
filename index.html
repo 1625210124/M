@@ -31,7 +31,11 @@
         .hidden { display: none !important; }
         iframe { width: 100%; height: 350px; border-radius: 15px; border: none; margin-top: 15px; background: #000; }
         .delete-small { background: #ff4d4d; border: none; color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 10px; }
-        .preview-box { margin-top: 20px; border-top: 1px solid #444; padding-top: 20px; }
+        
+        /* DUYURU VE ADMIN SATIRI STİLLERİ */
+        .announcement-box { margin-top: 20px; padding: 15px; border: 1px solid #7d2ae8; border-radius: 15px; background: rgba(125, 42, 232, 0.1); }
+        .announcement-text { font-size: 14px; color: #eee; font-style: italic; }
+        .admin-line { margin-top: 10px; font-size: 11px; color: #777; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -44,26 +48,36 @@
         <button class="btn register-btn" onclick="handleRegister()">Yeni Kayıt</button>
         <p onclick="loginAsGuest()" style="cursor:pointer; color:#888; font-size:12px; margin-top:10px;">Misafir Girişi</p>
         <p id="auth-msg" style="color: #ff6b6b; font-size: 12px;"></p>
+
+        <div id="info-section" class="hidden">
+            <div class="announcement-box">
+                <p style="font-size: 10px; color: #7d2ae8; margin: 0 0 5px 0; font-weight: bold;">DUYURU</p>
+                <div id="display-announcement" class="announcement-text">Yükleniyor...</div>
+            </div>
+            <div id="display-admin-line" class="admin-line"></div>
+        </div>
     </div>
 
     <div id="admin-panel" class="container hidden" style="width: 450px;">
         <h2 class="main-title">ADMIN <span>HUB</span></h2>
         
+        <div style="background: rgba(125, 42, 232, 0.15); padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #7d2ae8;">
+            <p style="font-size:12px; margin:0 0 10px 0; color:#fff;">PANEL YÖNETİMİ</p>
+            <input type="text" id="input-announcement" placeholder="Duyuru metni yaz...">
+            <input type="text" id="input-admin-line" placeholder="Admin satırı (Instagram vb.)">
+            <button class="btn login-btn" onclick="updateInfo()">Bilgileri Güncelle</button>
+        </div>
+
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
-            <p style="font-size:12px; margin:0 0 10px 0; color:#7d2ae8;">YENİ İÇERİK EKLE</p>
+            <p style="font-size:12px; margin:0 0 10px 0; color:#28a745;">YENİ İÇERİK EKLE</p>
             <input type="text" id="new-content-name" placeholder="İçerik Adı">
             <input type="text" id="new-content-link" placeholder="Google Drive Linki">
             <button class="btn add-btn" onclick="addNewContent()">Gönder</button>
         </div>
 
         <div id="user-list"></div>
-        
-        <div class="preview-box">
-            <p style="font-size:12px; color:#888; margin-bottom: 10px;">YÜKLÜ İÇERİKLER VE YÖNETİM</p>
-            <div id="admin-preview-area"></div>
-        </div>
-
-        <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Güvenli Çıkış</button>
+        <div id="admin-preview-area" style="margin-top:20px;"></div>
+        <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Çıkış</button>
     </div>
 
     <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100; border:2px solid #7d2ae8; top:50%; left:50%; transform:translate(-50%, -50%);">
@@ -95,57 +109,64 @@
         let currentEditingUser = "";
         let allContents = {};
 
+        // DUYURU VE ADMIN SATIRINI CANLI DİNLE
+        db.ref('site_info').on('value', s => {
+            const data = s.val();
+            if(data) {
+                document.getElementById('display-announcement').innerText = data.announcement || "Duyuru yok.";
+                document.getElementById('display-admin-line').innerText = data.admin_line || "";
+                document.getElementById('info-section').classList.remove('hidden');
+                // Admin inputlarını da doldur (paneldeyse kolaylık olsun)
+                if(document.getElementById('input-announcement')) {
+                    document.getElementById('input-announcement').value = data.announcement || "";
+                    document.getElementById('input-admin-line').value = data.admin_line || "";
+                }
+            }
+        });
+
+        function updateInfo() {
+            const ann = document.getElementById('input-announcement').value;
+            const line = document.getElementById('input-admin-line').value;
+            db.ref('site_info').set({ announcement: ann, admin_line: line })
+            .then(() => alert("Bilgiler güncellendi!"));
+        }
+
         function cleanDriveLink(url) {
             const match = url.match(/\/d\/(.+?)\//);
             return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
         }
 
-        // --- ADMİN FONKSİYONLARI ---
         function addNewContent() {
             const name = document.getElementById('new-content-name').value;
             const link = document.getElementById('new-content-link').value;
             if(!name || !link) return alert("Boş bırakma!");
-            
             const newId = "item_" + Date.now();
-            db.ref('contents/' + newId).set({ name: name, link: cleanDriveLink(link) })
-            .then(() => {
-                document.getElementById('new-content-name').value = "";
-                document.getElementById('new-content-link').value = "";
-            });
+            db.ref('contents/' + newId).set({ name: name, link: cleanDriveLink(link) });
         }
 
         function deleteContent(id) {
-            if(confirm("Bu içeriği silmek istediğine emin misin?")) db.ref('contents/' + id).remove();
+            if(confirm("Silinsin mi?")) db.ref('contents/' + id).remove();
         }
 
         function loadAdminPanel() {
             showView('admin-panel');
-            // İçerikleri ve Önizlemeleri Yükle
             db.ref('contents').on('value', s => {
                 allContents = s.val() || {};
                 const previewArea = document.getElementById('admin-preview-area');
                 previewArea.innerHTML = "";
                 for(let id in allContents) {
-                    previewArea.innerHTML += `
-                        <div style="margin-bottom: 20px; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 10px;">
-                            <div class="user-card">
-                                <span>${allContents[id].name}</span>
-                                <button class="delete-small" onclick="deleteContent('${id}')">SİL</button>
-                            </div>
-                            <iframe src="${allContents[id].link}"></iframe>
-                        </div>
-                    `;
+                    previewArea.innerHTML += `<div style="margin-bottom:20px;background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;">
+                        <div class="user-card"><span>${allContents[id].name}</span><button class="delete-small" onclick="deleteContent('${id}')">SİL</button></div>
+                        <iframe src="${allContents[id].link}"></iframe></div>`;
                 }
             });
-            // Kullanıcıları Listele
             db.ref('users').on('value', s => {
                 const users = s.val();
                 const uList = document.getElementById('user-list');
                 uList.innerHTML = "";
                 for(let u in users) {
                     uList.innerHTML += `<div class="user-card" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
-                        <strong>${u === "Misafir_Giris" ? "⭐ GENEL MİSAFİR" : u}</strong>
-                    </div>`;
+                        <strong>${u === "Misafir_Giris" ? "⭐ GENEL MİSAFİR" : u}</strong></div>`;
                 }
             });
         }
@@ -164,15 +185,10 @@
 
         function savePermissions() {
             let newPerms = {};
-            document.querySelectorAll('.perm-check').forEach(cb => {
-                newPerms[cb.getAttribute('data-id')] = cb.checked;
-            });
-            db.ref('users/' + currentEditingUser + '/perms').set(newPerms).then(() => {
-                closeEdit(); alert("Yetkiler Kaydedildi!");
-            });
+            document.querySelectorAll('.perm-check').forEach(cb => { newPerms[cb.getAttribute('data-id')] = cb.checked; });
+            db.ref('users/' + currentEditingUser + '/perms').set(newPerms).then(() => { closeEdit(); alert("Yetkiler Kaydedildi!"); });
         }
 
-        // --- GİRİŞ VE KULLANICI FONKSİYONLARI ---
         function handleLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -200,17 +216,13 @@
             document.getElementById('u-welcome').innerHTML = `SELAM, <span>${name.toUpperCase()}</span>`;
             const area = document.getElementById('user-content-area');
             area.innerHTML = "";
-            
             db.ref('contents').once('value').then(s => {
                 const contents = s.val();
                 let found = false;
                 for(let id in contents) {
-                    if(perms && perms[id]) {
-                        area.innerHTML += `<iframe src="${contents[id].link}"></iframe>`;
-                        found = true;
-                    }
+                    if(perms && perms[id]) { area.innerHTML += `<iframe src="${contents[id].link}"></iframe>`; found = true; }
                 }
-                if(!found) area.innerHTML = "<p style='color:#888; padding:50px;'>Görüntülenecek içerik yok. Adminden izin bekleyin.</p>";
+                if(!found) area.innerHTML = "<p style='color:#888; padding:50px;'>Duyuruyu kontrol edin veya adminden izin bekleyin.</p>";
             });
         }
 
@@ -218,5 +230,4 @@
         function showView(id) { document.querySelectorAll('.container').forEach(c => c.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
     </script>
 </body>
-    </html>
-    
+</html>
