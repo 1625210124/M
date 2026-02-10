@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulut Yönetimli Panel</title>
+    <title>Gelişmiş Üye Paneli</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -16,70 +16,65 @@
         }
         @keyframes dalgalanma { 0% {background-position:0% 50%} 50% {background-position:100% 50%} 100% {background-position:0% 50%} }
         .container {
-            background: rgba(30, 30, 30, 0.95); padding: 30px; border-radius: 25px;
+            background: rgba(30, 30, 30, 0.95); padding: 25px; border-radius: 20px;
             backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1);
-            width: 360px; text-align: center; box-shadow: 0 15px 45px rgba(0,0,0,0.8); margin-top: 5vh;
+            width: 350px; text-align: center; box-shadow: 0 15px 45px rgba(0,0,0,0.8); margin-top: 5vh;
         }
-        .mode-btn { width: 100%; padding: 18px; margin: 10px 0; border-radius: 15px; border: none; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; color: white; }
-        .admin-btn { background: #333; border: 1px solid #555; }
-        .guest-btn { background: #7d2ae8; box-shadow: 0 4px 15px rgba(125, 42, 232, 0.4); }
-        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-        .num-btn { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 15px; font-size: 20px; border-radius: 12px; cursor: pointer; }
-        .pin-display { height: 55px; background: rgba(0,0,0,0.5); border-radius: 12px; margin-bottom: 15px; font-size: 24px; display: flex; align-items: center; justify-content: center; letter-spacing: 5px; border: 1px solid #444; }
-        .admin-item { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 15px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); }
-        .preview-box { width: 60px; height: 60px; border-radius: 10px; object-fit: cover; background: #222; }
-        iframe { width: 100%; height: 380px; border-radius: 15px; border: none; margin-bottom: 20px; background: #000; }
+        input {
+            width: 90%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #444;
+            background: rgba(0,0,0,0.3); color: white; outline: none;
+        }
+        .btn {
+            width: 95%; padding: 12px; margin: 10px 0; border-radius: 10px; border: none;
+            cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        .login-btn { background: #7d2ae8; color: white; }
+        .register-btn { background: #444; color: white; }
+        .user-card {
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;
+            margin-bottom: 10px; text-align: left; border: 1px solid #333; cursor: pointer;
+        }
+        .user-card:hover { background: rgba(255,255,255,0.1); }
         .hidden { display: none !important; }
+        iframe { width: 100%; height: 350px; border-radius: 15px; border: none; margin-top: 15px; background: #000; }
+        .badge { font-size: 10px; background: #7d2ae8; padding: 2px 6px; border-radius: 5px; margin-left: 5px; }
     </style>
 </head>
 <body>
 
-    <div id="mode-selection" class="container">
-        <h2>HOŞ GELDİN</h2>
-        <button class="mode-btn admin-btn" onclick="showView('pin-screen')">🔑 Yönetici Girişi</button>
-        <button class="mode-btn guest-btn" onclick="loginGuest()">👤 Misafir Girişi</button>
+    <div id="auth-screen" class="container">
+        <h2 style="font-weight: 300;">HOŞ GELDİN</h2>
+        <input type="text" id="username" placeholder="Kullanıcı Adı">
+        <input type="password" id="password" placeholder="Şifre">
+        <button class="btn login-btn" onclick="handleLogin()">Giriş Yap</button>
+        <button class="btn register-btn" onclick="handleRegister()">Kaydol</button>
+        <p id="auth-msg" style="font-size: 12px; color: #ff6b6b;"></p>
     </div>
 
-    <div id="pin-screen" class="container hidden">
-        <h2>PIN GEREKLİ</h2>
-        <div id="display" class="pin-display"></div>
-        <div class="numpad">
-            <button class="num-btn" onclick="addNum('1')">1</button><button class="num-btn" onclick="addNum('2')">2</button><button class="num-btn" onclick="addNum('3')">3</button>
-            <button class="num-btn" onclick="addNum('4')">4</button><button class="num-btn" onclick="addNum('5')">5</button><button class="num-btn" onclick="addNum('6')">6</button>
-            <button class="num-btn" onclick="addNum('7')">7</button><button class="num-btn" onclick="addNum('8')">8</button><button class="num-btn" onclick="addNum('9')">9</button>
-            <button class="num-btn" style="color:#ff6b6b" onclick="clearPin()">C</button><button class="num-btn" onclick="addNum('0')">0</button>
-            <button class="num-btn" style="background:#444" onclick="checkPin()">OK</button>
-        </div>
+    <div id="admin-panel" class="container hidden" style="width: 450px;">
+        <h2 style="font-weight: 300;">YÖNETİCİ: MURAT</h2>
+        <p style="font-size: 13px; color: #888;">Üyeler ve Yetkiler:</p>
+        <div id="user-list"></div>
+        <button class="btn register-btn" onclick="location.reload()">Çıkış Yap</button>
     </div>
 
-    <div id="admin-panel" class="container hidden" style="width: 400px;">
-        <h2>YÖNETİM</h2>
-        <div class="admin-item">
-            <img class="preview-box" src="https://drive.google.com/thumbnail?id=1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs">
-            <span>Fotoğraf 1</span>
-            <input type="checkbox" id="check-photo1" onchange="saveToCloud()">
-        </div>
-        <div class="admin-item">
-            <img class="preview-box" src="https://drive.google.com/thumbnail?id=1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO">
-            <span>Fotoğraf 2</span>
-            <input type="checkbox" id="check-photo2" onchange="saveToCloud()">
-        </div>
-        <div class="admin-item">
-            <div class="preview-box" style="display:flex;align-items:center;justify-content:center;font-size:10px;">VİDEO</div>
-            <span>Video</span>
-            <input type="checkbox" id="check-video" onchange="saveToCloud()">
-        </div>
-        <button class="mode-btn guest-btn" onclick="loginGuest()">Görünümü Test Et</button>
+    <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100;">
+        <h3 id="editing-user-name">Düzenle</h3>
+        <label><input type="checkbox" id="perm-p1"> Fotoğraf 1</label><br>
+        <label><input type="checkbox" id="perm-p2"> Fotoğraf 2</label><br>
+        <label><input type="checkbox" id="perm-v1"> Video</label><br>
+        <button class="btn login-btn" onclick="savePermissions()">Kaydet</button>
+        <button class="btn register-btn" onclick="closeEdit()">Kapat</button>
     </div>
 
-    <div id="guest-panel" class="container hidden" style="width: 95%; max-width: 550px;">
-        <h2 id="g-title">MİSAFİR PANELİ</h2>
-        <div id="guest-content"></div>
-        <button class="mode-btn admin-btn" onclick="location.reload()">Geri Dön</button>
+    <div id="user-panel" class="container hidden" style="width: 95%; max-width: 500px;">
+        <h2 id="u-welcome">Panelin</h2>
+        <div id="user-content"></div>
+        <button class="btn admin-btn" onclick="location.reload()">Çıkış Yap</button>
     </div>
 
     <script>
-        // FOTOĞRAFTAN ALDIĞIM KONFİGÜRASYON
+        // FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyAKy91n0Ib-Em_YDwwy8odQnrVXq5QFmqA",
             authDomain: "website-6bc19.firebaseapp.com",
@@ -89,55 +84,101 @@
             messagingSenderId: "952484790658",
             appId: "1:952484790658:web:38f11b84b05cd7e650cf9b"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let currentPin = "";
-        const correctPin = "162124";
+        let currentEditingUser = "";
 
-        // BULUTTAN AYARLARI ÇEK
-        db.ref('settings').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if(data) {
-                document.getElementById('check-photo1').checked = data.photo1;
-                document.getElementById('check-photo2').checked = data.photo2;
-                document.getElementById('check-video').checked = data.video;
+        // GİRİŞ YAP
+        function handleLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+
+            if(user === "Murat" && pass === "162124") {
+                loadAdminPanel();
+                return;
             }
-        });
 
-        function saveToCloud() {
-            db.ref('settings').set({
-                photo1: document.getElementById('check-photo1').checked,
-                photo2: document.getElementById('check-photo2').checked,
-                video: document.getElementById('check-video').checked
+            db.ref('users/' + user).once('value').then((s) => {
+                const userData = s.val();
+                if(userData && userData.password === pass) {
+                    loadUserPanel(user, userData.perms);
+                } else {
+                    document.getElementById('auth-msg').innerText = "Hatalı kullanıcı adı veya şifre!";
+                }
             });
+        }
+
+        // KAYDOL
+        function handleRegister() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if(user.length < 3 || pass.length < 3) {
+                alert("Bilgiler çok kısa!"); return;
+            }
+            if(user === "Murat") { alert("Bu isim alınamaz!"); return; }
+
+            db.ref('users/' + user).set({
+                password: pass,
+                perms: { p1: false, p2: false, v1: false } // İlk kayıt olan bişey göremez
+            }).then(() => {
+                alert("Kayıt başarılı! Admin onayından sonra içerikleri görebilirsin.");
+            });
+        }
+
+        // ADMIN PANELİ YÜKLE
+        function loadAdminPanel() {
+            showView('admin-panel');
+            db.ref('users').on('value', (s) => {
+                const users = s.val();
+                const list = document.getElementById('user-list');
+                list.innerHTML = "";
+                for(let u in users) {
+                    const card = document.createElement('div');
+                    card.className = "user-card";
+                    card.innerHTML = `<strong>${u}</strong> <span class="badge">Yetki Ver</span>`;
+                    card.onclick = () => openEdit(u, users[u].perms);
+                    list.appendChild(card);
+                }
+            });
+        }
+
+        function openEdit(username, perms) {
+            currentEditingUser = username;
+            document.getElementById('editing-user-name').innerText = username + " Yetkileri";
+            document.getElementById('perm-p1').checked = perms.p1;
+            document.getElementById('perm-p2').checked = perms.p2;
+            document.getElementById('perm-v1').checked = perms.v1;
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function savePermissions() {
+            const newPerms = {
+                p1: document.getElementById('perm-p1').checked,
+                p2: document.getElementById('perm-p2').checked,
+                v1: document.getElementById('perm-v1').checked
+            };
+            db.ref('users/' + currentEditingUser + '/perms').set(newPerms);
+            closeEdit();
+        }
+
+        function closeEdit() { document.getElementById('edit-modal').classList.add('hidden'); }
+
+        // KULLANICI PANELİ YÜKLE
+        function loadUserPanel(name, perms) {
+            showView('user-panel');
+            document.getElementById('u-welcome').innerText = "Hoş Geldin, " + name;
+            const content = document.getElementById('user-content');
+            content.innerHTML = "";
+            if(perms.p1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>';
+            if(perms.p2) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>';
+            if(perms.v1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>';
+            if(!perms.p1 && !perms.p2 && !perms.v1) content.innerHTML = "<p>Henüz yetkin yok.</p>";
         }
 
         function showView(id) {
             document.querySelectorAll('.container').forEach(c => c.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
-        }
-
-        function addNum(n) { if(currentPin.length < 6) { currentPin += n; updateDisplay(); } }
-        function clearPin() { currentPin = ""; updateDisplay(); }
-        function updateDisplay() { document.getElementById('display').innerText = "*".repeat(currentPin.length); }
-
-        function checkPin() {
-            if(currentPin === correctPin) showView('admin-panel');
-            else { alert("Hatalı PIN!"); clearPin(); }
-        }
-
-        function loginGuest() {
-            db.ref('settings').once('value').then((snapshot) => {
-                const s = snapshot.val() || {photo1:true, photo2:true, video:true};
-                const content = document.getElementById('guest-content');
-                content.innerHTML = "";
-                if(s.photo1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>';
-                if(s.photo2) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>';
-                if(s.video) content.innerHTML += '<iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>';
-                showView('guest-panel');
-            });
         }
     </script>
 </body>
