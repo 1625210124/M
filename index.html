@@ -27,6 +27,8 @@
         .btn { width: 95%; padding: 12px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .login-btn { background: #7d2ae8; color: white; }
         .register-btn { background: #444; color: white; }
+        .guest-link { display: block; margin-top: 15px; color: #888; text-decoration: none; font-size: 13px; cursor: pointer; }
+        .guest-link:hover { color: #7d2ae8; }
         
         .user-card {
             background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px;
@@ -50,16 +52,20 @@
         <input type="password" id="password" placeholder="Şifre">
         <button class="btn login-btn" onclick="handleLogin()">Giriş Yap</button>
         <button class="btn register-btn" onclick="handleRegister()">Yeni Kayıt</button>
+        <span class="guest-link" onclick="loginAsGuest()">Misafir Olarak Devam Et</span>
         <p id="auth-msg" style="font-size: 12px; color: #ff6b6b;"></p>
     </div>
 
     <div id="admin-panel" class="container hidden" style="width: 420px;">
         <h2 class="main-title">ADMIN <span>HUB</span></h2>
         <div id="user-list"></div>
-        <button class="btn register-btn" onclick="location.reload()">Çıkış</button>
+        <hr style="border: 0.5px solid #444; margin: 20px 0;">
+        <p style="font-size: 12px; color: #888;">TÜM İÇERİKLER (ÖNİZLEME)</p>
+        <div id="admin-preview-content"></div>
+        <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Çıkış</button>
     </div>
 
-    <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100; border: 2px solid #7d2ae8;">
+    <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100; border: 2px solid #7d2ae8; top: 50%; left: 50%; transform: translate(-50%, -50%); margin-top: 0;">
         <h3 id="editing-user-name">Yetki Düzenle</h3>
         <label><input type="checkbox" id="perm-p1"> Fotoğraf 1</label>
         <label><input type="checkbox" id="perm-p2"> Fotoğraf 2</label>
@@ -103,13 +109,18 @@
         function handleRegister() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
-            if(user === "Muart" || user === "") return;
+            if(user === "Muart" || user === "" || pass === "") { alert("Geçersiz bilgi!"); return; }
             db.ref('users/' + user).set({ password: pass, perms: { p1: false, p2: false, v1: false } })
-            .then(() => alert("Kayıt başarılı! Admin onayı bekleniyor."));
+            .then(() => alert("Kayıt başarılı! Muart'ın onayını bekle."));
+        }
+
+        function loginAsGuest() {
+            loadUserPanel("Misafir", { p1: false, p2: false, v1: false });
         }
 
         function loadAdminPanel() {
             showView('admin-panel');
+            // Kullanıcıları yükle
             db.ref('users').on('value', (s) => {
                 const users = s.val();
                 const list = document.getElementById('user-list');
@@ -118,7 +129,7 @@
                     const card = document.createElement('div');
                     card.className = "user-card";
                     card.innerHTML = `
-                        <div class="user-info" onclick="openEdit('${u}', ${JSON.stringify(users[u].perms)})">
+                        <div class="user-info" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
                             <strong>${u}</strong> <span style="font-size:10px; color:#7d2ae8; margin-left:5px;">(Düzenle)</span>
                         </div>
                         <button class="delete-btn" onclick="deleteUser('${u}')">SİL</button>
@@ -126,12 +137,17 @@
                     list.appendChild(card);
                 }
             });
+            // Admin için içerik önizlemesi
+            const preview = document.getElementById('admin-preview-content');
+            preview.innerHTML = `
+                <iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>
+                <iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>
+                <iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>
+            `;
         }
 
         function deleteUser(username) {
-            if(confirm(username + " adlı kullanıcıyı silmek istiyor musun?")) {
-                db.ref('users/' + username).remove();
-            }
+            if(confirm(username + " silinsin mi?")) db.ref('users/' + username).remove();
         }
 
         function openEdit(username, perms) {
@@ -149,8 +165,8 @@
                 p2: document.getElementById('perm-p2').checked,
                 v1: document.getElementById('perm-v1').checked
             };
-            db.ref('users/' + currentEditingUser + '/perms').update(newPerms);
-            closeEdit();
+            db.ref('users/' + currentEditingUser + '/perms').set(newPerms)
+            .then(() => { closeEdit(); alert("Yetkiler güncellendi!"); });
         }
 
         function closeEdit() { document.getElementById('edit-modal').classList.add('hidden'); }
@@ -160,10 +176,14 @@
             document.getElementById('u-welcome').innerHTML = `SELAM, <span>${name.toUpperCase()}</span>`;
             const content = document.getElementById('user-content');
             content.innerHTML = "";
-            if(perms && perms.p1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>';
-            if(perms && perms.p2) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>';
-            if(perms && perms.v1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>';
-            if(!perms || (!perms.p1 && !perms.p2 && !perms.v1)) content.innerHTML = "<p>Muart henüz size yetki vermedi.</p>";
+            let hasPerm = false;
+            if(perms && perms.p1) { content.innerHTML += '<iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>'; hasPerm = true; }
+            if(perms && perms.p2) { content.innerHTML += '<iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>'; hasPerm = true; }
+            if(perms && perms.v1) { content.innerHTML += '<iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>'; hasPerm = true; }
+            
+            if(!hasPerm) {
+                content.innerHTML = "<p style='padding:40px; color:#888;'>İçerikleri görmek için lütfen adminden izin bekleyin.</p>";
+            }
         }
 
         function showView(id) {
@@ -172,5 +192,4 @@
         }
     </script>
 </body>
-    </html>
-    
+</html>
