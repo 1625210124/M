@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gelişmiş Üye Paneli</title>
+    <title>Muart Yönetim Paneli</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -33,48 +33,52 @@
         .user-card {
             background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;
             margin-bottom: 10px; text-align: left; border: 1px solid #333; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .user-card:hover { background: rgba(255,255,255,0.1); }
+        .user-card:hover { background: rgba(255,255,255,0.1); border-color: #7d2ae8; }
         .hidden { display: none !important; }
-        iframe { width: 100%; height: 350px; border-radius: 15px; border: none; margin-top: 15px; background: #000; }
-        .badge { font-size: 10px; background: #7d2ae8; padding: 2px 6px; border-radius: 5px; margin-left: 5px; }
+        iframe { width: 100%; height: 380px; border-radius: 15px; border: none; margin-top: 15px; background: #000; }
+        .badge { font-size: 10px; background: #7d2ae8; padding: 4px 8px; border-radius: 6px; }
+        label { display: block; margin: 15px 0; text-align: left; cursor: pointer; font-size: 14px; }
+        input[type="checkbox"] { width: 18px; height: 18px; vertical-align: middle; margin-right: 10px; }
     </style>
 </head>
 <body>
 
     <div id="auth-screen" class="container">
-        <h2 style="font-weight: 300;">HOŞ GELDİN</h2>
+        <h2 style="font-weight: 300; letter-spacing: 2px;">HOŞ GELDİN</h2>
         <input type="text" id="username" placeholder="Kullanıcı Adı">
         <input type="password" id="password" placeholder="Şifre">
         <button class="btn login-btn" onclick="handleLogin()">Giriş Yap</button>
-        <button class="btn register-btn" onclick="handleRegister()">Kaydol</button>
-        <p id="auth-msg" style="font-size: 12px; color: #ff6b6b;"></p>
+        <button class="btn register-btn" onclick="handleRegister()">Yeni Kayıt</button>
+        <p id="auth-msg" style="font-size: 12px; color: #ff6b6b; margin-top: 10px;"></p>
     </div>
 
-    <div id="admin-panel" class="container hidden" style="width: 450px;">
-        <h2 style="font-weight: 300;">YÖNETİCİ: MURAT</h2>
-        <p style="font-size: 13px; color: #888;">Üyeler ve Yetkiler:</p>
+    <div id="admin-panel" class="container hidden" style="width: 420px;">
+        <h2 style="font-weight: 300; color: #7d2ae8;">ADMİN: MUART</h2>
+        <p style="font-size: 13px; color: #888; margin-bottom: 20px;">Kayıtlı Üyeleri Yönet:</p>
         <div id="user-list"></div>
-        <button class="btn register-btn" onclick="location.reload()">Çıkış Yap</button>
+        <button class="btn register-btn" onclick="location.reload()">Güvenli Çıkış</button>
     </div>
 
-    <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100;">
-        <h3 id="editing-user-name">Düzenle</h3>
-        <label><input type="checkbox" id="perm-p1"> Fotoğraf 1</label><br>
-        <label><input type="checkbox" id="perm-p2"> Fotoğraf 2</label><br>
-        <label><input type="checkbox" id="perm-v1"> Video</label><br>
-        <button class="btn login-btn" onclick="savePermissions()">Kaydet</button>
-        <button class="btn register-btn" onclick="closeEdit()">Kapat</button>
+    <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100; border: 2px solid #7d2ae8;">
+        <h3 id="editing-user-name" style="margin-bottom: 20px;">Düzenle</h3>
+        <hr style="border: 0.5px solid #444;">
+        <label><input type="checkbox" id="perm-p1"> 🖼️ Fotoğraf 1 (Arşiv)</label>
+        <label><input type="checkbox" id="perm-p2"> 🖼️ Fotoğraf 2 (Özel)</label>
+        <label><input type="checkbox" id="perm-v1"> 🎬 Ana Video Dosyası</label>
+        <button class="btn login-btn" onclick="savePermissions()">Değişiklikleri Kaydet</button>
+        <button class="btn register-btn" onclick="closeEdit()">Vazgeç</button>
     </div>
 
-    <div id="user-panel" class="container hidden" style="width: 95%; max-width: 500px;">
-        <h2 id="u-welcome">Panelin</h2>
+    <div id="user-panel" class="container hidden" style="width: 95%; max-width: 550px;">
+        <h2 id="u-welcome" style="font-weight: 300;">Panelin</h2>
         <div id="user-content"></div>
-        <button class="btn admin-btn" onclick="location.reload()">Çıkış Yap</button>
+        <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Çıkış Yap</button>
     </div>
 
     <script>
-        // FIREBASE CONFIG
+        // FIREBASE CONFIG (SENİN BİLGİLERİN)
         const firebaseConfig = {
             apiKey: "AIzaSyAKy91n0Ib-Em_YDwwy8odQnrVXq5QFmqA",
             authDomain: "website-6bc19.firebaseapp.com",
@@ -89,44 +93,49 @@
 
         let currentEditingUser = "";
 
-        // GİRİŞ YAP
+        // GİRİŞ KONTROLÜ
         function handleLogin() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
 
-            if(user === "Murat" && pass === "162124") {
+            // MUART KONTROLÜ
+            if(user === "Muart" && pass === "162124") {
                 loadAdminPanel();
                 return;
             }
 
+            // DİĞER KULLANICILARIN KONTROLÜ
             db.ref('users/' + user).once('value').then((s) => {
                 const userData = s.val();
                 if(userData && userData.password === pass) {
                     loadUserPanel(user, userData.perms);
                 } else {
-                    document.getElementById('auth-msg').innerText = "Hatalı kullanıcı adı veya şifre!";
+                    document.getElementById('auth-msg').innerText = "Hatalı Giriş! Bilgileri kontrol et.";
                 }
             });
         }
 
-        // KAYDOL
+        // KAYIT KONTROLÜ
         function handleRegister() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            if(user.length < 3 || pass.length < 3) {
-                alert("Bilgiler çok kısa!"); return;
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            
+            if(user === "Muart" || user === "Admin") {
+                alert("Bu ismi kullanamazsın!"); return;
             }
-            if(user === "Murat") { alert("Bu isim alınamaz!"); return; }
+            if(user.length < 2 || pass.length < 2) {
+                alert("Kullanıcı adı ve şifre çok kısa!"); return;
+            }
 
             db.ref('users/' + user).set({
                 password: pass,
-                perms: { p1: false, p2: false, v1: false } // İlk kayıt olan bişey göremez
+                perms: { p1: false, p2: false, v1: false } // Başta her şey kapalı
             }).then(() => {
-                alert("Kayıt başarılı! Admin onayından sonra içerikleri görebilirsin.");
+                alert("Kaydın alındı! Muart onay verince içerikleri görebileceksin.");
             });
         }
 
-        // ADMIN PANELİ YÜKLE
+        // ADMİN: ÜYELERİ LİSTELE
         function loadAdminPanel() {
             showView('admin-panel');
             db.ref('users').on('value', (s) => {
@@ -136,7 +145,7 @@
                 for(let u in users) {
                     const card = document.createElement('div');
                     card.className = "user-card";
-                    card.innerHTML = `<strong>${u}</strong> <span class="badge">Yetki Ver</span>`;
+                    card.innerHTML = `<span><strong>${u}</strong></span> <span class="badge">DÜZENLE</span>`;
                     card.onclick = () => openEdit(u, users[u].perms);
                     list.appendChild(card);
                 }
@@ -145,10 +154,10 @@
 
         function openEdit(username, perms) {
             currentEditingUser = username;
-            document.getElementById('editing-user-name').innerText = username + " Yetkileri";
-            document.getElementById('perm-p1').checked = perms.p1;
-            document.getElementById('perm-p2').checked = perms.p2;
-            document.getElementById('perm-v1').checked = perms.v1;
+            document.getElementById('editing-user-name').innerText = username + " Kişisi";
+            document.getElementById('perm-p1').checked = perms.p1 || false;
+            document.getElementById('perm-p2').checked = perms.p2 || false;
+            document.getElementById('perm-v1').checked = perms.v1 || false;
             document.getElementById('edit-modal').classList.remove('hidden');
         }
 
@@ -158,22 +167,26 @@
                 p2: document.getElementById('perm-p2').checked,
                 v1: document.getElementById('perm-v1').checked
             };
-            db.ref('users/' + currentEditingUser + '/perms').set(newPerms);
+            db.ref('users/' + currentEditingUser + '/perms').update(newPerms);
             closeEdit();
         }
 
         function closeEdit() { document.getElementById('edit-modal').classList.add('hidden'); }
 
-        // KULLANICI PANELİ YÜKLE
+        // KULLANICI: İÇERİKLERİ GÖSTER
         function loadUserPanel(name, perms) {
             showView('user-panel');
-            document.getElementById('u-welcome').innerText = "Hoş Geldin, " + name;
+            document.getElementById('u-welcome').innerText = "Selam, " + name;
             const content = document.getElementById('user-content');
             content.innerHTML = "";
-            if(perms.p1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>';
-            if(perms.p2) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>';
-            if(perms.v1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>';
-            if(!perms.p1 && !perms.p2 && !perms.v1) content.innerHTML = "<p>Henüz yetkin yok.</p>";
+            
+            if(perms && perms.p1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>';
+            if(perms && perms.p2) content.innerHTML += '<iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>';
+            if(perms && perms.v1) content.innerHTML += '<iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>';
+            
+            if(!perms || (!perms.p1 && !perms.p2 && !perms.v1)) {
+                content.innerHTML = "<p style='padding:50px; color:#666;'>Görüntülenecek bir şey yok. Muart'ın sana yetki vermesini bekle.</p>";
+            }
         }
 
         function showView(id) {
