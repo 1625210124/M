@@ -22,7 +22,7 @@
         }
         .main-title { font-weight: 300; letter-spacing: 3px; color: #fff; margin-bottom: 20px; text-transform: uppercase; }
         .main-title span { color: #7d2ae8; font-weight: bold; }
-        input, select { width: 90%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: rgba(0,0,0,0.3); color: white; outline: none; }
+        input { width: 90%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: rgba(0,0,0,0.3); color: white; outline: none; }
         .btn { width: 95%; padding: 12px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .login-btn { background: #7d2ae8; color: white; }
         .add-btn { background: #28a745; color: white; font-size: 14px; }
@@ -31,6 +31,7 @@
         .hidden { display: none !important; }
         iframe { width: 100%; height: 350px; border-radius: 15px; border: none; margin-top: 15px; background: #000; }
         .delete-small { background: #ff4d4d; border: none; color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 10px; }
+        .preview-box { margin-top: 20px; border-top: 1px solid #444; padding-top: 20px; }
     </style>
 </head>
 <body>
@@ -50,16 +51,19 @@
         
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
             <p style="font-size:12px; margin:0 0 10px 0; color:#7d2ae8;">YENİ İÇERİK EKLE</p>
-            <input type="text" id="new-content-name" placeholder="İçerik Adı (Örn: Tatil Foto)">
+            <input type="text" id="new-content-name" placeholder="İçerik Adı">
             <input type="text" id="new-content-link" placeholder="Google Drive Linki">
-            <button class="btn add-btn" onclick="addNewContent()">Sisteme Yükle</button>
+            <button class="btn add-btn" onclick="addNewContent()">Gönder</button>
         </div>
 
         <div id="user-list"></div>
-        <hr style="border:0.5px solid #444;">
-        <p style="font-size:12px; color:#888;">İÇERİKLERİ YÖNET</p>
-        <div id="content-list-admin"></div>
-        <button class="btn register-btn" onclick="location.reload()">Çıkış</button>
+        
+        <div class="preview-box">
+            <p style="font-size:12px; color:#888; margin-bottom: 10px;">YÜKLÜ İÇERİKLER VE YÖNETİM</p>
+            <div id="admin-preview-area"></div>
+        </div>
+
+        <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Güvenli Çıkış</button>
     </div>
 
     <div id="edit-modal" class="container hidden" style="position:fixed; z-index:100; border:2px solid #7d2ae8; top:50%; left:50%; transform:translate(-50%, -50%);">
@@ -76,7 +80,6 @@
     </div>
 
     <script>
-        // FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyAKy91n0Ib-Em_YDwwy8odQnrVXq5QFmqA",
             authDomain: "website-6bc19.firebaseapp.com",
@@ -92,7 +95,6 @@
         let currentEditingUser = "";
         let allContents = {};
 
-        // Drive linkini temizleme fonksiyonu
         function cleanDriveLink(url) {
             const match = url.match(/\/d\/(.+?)\//);
             return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
@@ -102,30 +104,37 @@
         function addNewContent() {
             const name = document.getElementById('new-content-name').value;
             const link = document.getElementById('new-content-link').value;
-            if(!name || !link) return alert("Bilgileri doldur!");
+            if(!name || !link) return alert("Boş bırakma!");
             
             const newId = "item_" + Date.now();
             db.ref('contents/' + newId).set({ name: name, link: cleanDriveLink(link) })
             .then(() => {
                 document.getElementById('new-content-name').value = "";
                 document.getElementById('new-content-link').value = "";
-                alert("Başarıyla eklendi!");
             });
         }
 
         function deleteContent(id) {
-            if(confirm("Bu içeriği sistemden silmek istiyor musun?")) db.ref('contents/' + id).remove();
+            if(confirm("Bu içeriği silmek istediğine emin misin?")) db.ref('contents/' + id).remove();
         }
 
         function loadAdminPanel() {
             showView('admin-panel');
-            // İçerikleri Listele
+            // İçerikleri ve Önizlemeleri Yükle
             db.ref('contents').on('value', s => {
                 allContents = s.val() || {};
-                const list = document.getElementById('content-list-admin');
-                list.innerHTML = "";
+                const previewArea = document.getElementById('admin-preview-area');
+                previewArea.innerHTML = "";
                 for(let id in allContents) {
-                    list.innerHTML += `<div class="user-card"><span>${allContents[id].name}</span><button class="delete-small" onclick="deleteContent('${id}')">SİL</button></div>`;
+                    previewArea.innerHTML += `
+                        <div style="margin-bottom: 20px; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 10px;">
+                            <div class="user-card">
+                                <span>${allContents[id].name}</span>
+                                <button class="delete-small" onclick="deleteContent('${id}')">SİL</button>
+                            </div>
+                            <iframe src="${allContents[id].link}"></iframe>
+                        </div>
+                    `;
                 }
             });
             // Kullanıcıları Listele
@@ -179,7 +188,7 @@
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             if(!user || !pass || user === "Muart") return;
-            db.ref('users/' + user).set({ password: pass, perms: {} }).then(() => alert("Kayıt başarılı! Admin onayı bekle."));
+            db.ref('users/' + user).set({ password: pass, perms: {} }).then(() => alert("Kayıt başarılı!"));
         }
 
         function loginAsGuest() {
@@ -201,7 +210,7 @@
                         found = true;
                     }
                 }
-                if(!found) area.innerHTML = "<p style='color:#888; padding:50px;'>Görüntülenecek içerik yok. Adminden yetki isteyin.</p>";
+                if(!found) area.innerHTML = "<p style='color:#888; padding:50px;'>Görüntülenecek içerik yok. Adminden izin bekleyin.</p>";
             });
         }
 
