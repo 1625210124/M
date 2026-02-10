@@ -60,7 +60,7 @@
         <h2 class="main-title">ADMIN <span>HUB</span></h2>
         <div id="user-list"></div>
         <hr style="border: 0.5px solid #444; margin: 20px 0;">
-        <p style="font-size: 12px; color: #888;">TÜM İÇERİKLER (ÖNİZLEME)</p>
+        <p style="font-size: 12px; color: #888;">TÜM İÇERİKLER (ADMİN ÖNİZLEME)</p>
         <div id="admin-preview-content"></div>
         <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Çıkış</button>
     </div>
@@ -95,6 +95,16 @@
 
         let currentEditingUser = "";
 
+        // Misafir hesabını otomatik oluştur/kontrol et
+        function checkGuestAccount() {
+            db.ref('users/Misafir_Giris').once('value').then(s => {
+                if(!s.exists()) {
+                    db.ref('users/Misafir_Giris').set({ password: "---", perms: {p1:false, p2:false, v1:false} });
+                }
+            });
+        }
+        checkGuestAccount();
+
         function handleLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -109,18 +119,19 @@
         function handleRegister() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
-            if(user === "Muart" || user === "" || pass === "") { alert("Geçersiz bilgi!"); return; }
+            if(user === "Muart" || user === "" || user === "Misafir_Giris") { alert("Geçersiz isim!"); return; }
             db.ref('users/' + user).set({ password: pass, perms: { p1: false, p2: false, v1: false } })
             .then(() => alert("Kayıt başarılı! Muart'ın onayını bekle."));
         }
 
         function loginAsGuest() {
-            loadUserPanel("Misafir", { p1: false, p2: false, v1: false });
+            db.ref('users/Misafir_Giris/perms').once('value').then(s => {
+                loadUserPanel("Misafir", s.val());
+            });
         }
 
         function loadAdminPanel() {
             showView('admin-panel');
-            // Kullanıcıları yükle
             db.ref('users').on('value', (s) => {
                 const users = s.val();
                 const list = document.getElementById('user-list');
@@ -130,16 +141,14 @@
                     card.className = "user-card";
                     card.innerHTML = `
                         <div class="user-info" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
-                            <strong>${u}</strong> <span style="font-size:10px; color:#7d2ae8; margin-left:5px;">(Düzenle)</span>
+                            <strong>${u === "Misafir_Giris" ? "⭐ GENEL MİSAFİR" : u}</strong>
                         </div>
-                        <button class="delete-btn" onclick="deleteUser('${u}')">SİL</button>
+                        ${u !== "Misafir_Giris" ? `<button class="delete-btn" onclick="deleteUser('${u}')">SİL</button>` : ''}
                     `;
                     list.appendChild(card);
                 }
             });
-            // Admin için içerik önizlemesi
-            const preview = document.getElementById('admin-preview-content');
-            preview.innerHTML = `
+            document.getElementById('admin-preview-content').innerHTML = `
                 <iframe src="https://drive.google.com/file/d/1JeJlMHuiowjIvoT_7pnueY9W1H2NFlFs/preview"></iframe>
                 <iframe src="https://drive.google.com/file/d/1vDs3TJlV23wEQaZm3gFUun8S4Fs1cISO/preview"></iframe>
                 <iframe src="https://drive.google.com/file/d/11nSTnUshybvI5PdCDmQncHQ4ro9zrXzm/preview"></iframe>
@@ -152,7 +161,7 @@
 
         function openEdit(username, perms) {
             currentEditingUser = username;
-            document.getElementById('editing-user-name').innerText = username + " Yetkileri";
+            document.getElementById('editing-user-name').innerText = (username === "Misafir_Giris" ? "Genel Misafir" : username) + " Yetkileri";
             document.getElementById('perm-p1').checked = perms ? perms.p1 : false;
             document.getElementById('perm-p2').checked = perms ? perms.p2 : false;
             document.getElementById('perm-v1').checked = perms ? perms.v1 : false;
@@ -192,4 +201,5 @@
         }
     </script>
 </body>
-</html>
+    </html>
+    
