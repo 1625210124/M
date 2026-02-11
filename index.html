@@ -55,8 +55,6 @@
         .download-btn { background: #28a745; color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; }
         
         .msg-box { background: rgba(125, 42, 232, 0.05); border: 1px solid #444; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: left; }
-        
-        /* Yanıt Kutusu Stili */
         .reply-area { background: rgba(40, 167, 69, 0.1); border-left: 4px solid #28a745; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: left; }
     </style>
 </head>
@@ -154,6 +152,13 @@
         let currentEditingUser = "";
         let currentUserName = "";
 
+        // Önce showView'ı tanımlıyoruz ki butonlar hata vermesin
+        function showView(id) { 
+            document.querySelectorAll('.container').forEach(c => c.classList.add('hidden')); 
+            document.getElementById(id).classList.remove('hidden');
+            if(id !== 'auth-screen') document.getElementById('global-logout').classList.remove('hidden');
+        }
+
         function switchAdminTab(t) {
             document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('#admin-panel .tab-btn').forEach(el => el.classList.remove('active'));
@@ -206,12 +211,8 @@
                                 <span style="font-size:10px; color:#666;">${data[id].time || ''}</span>
                             </div>
                             <p style="margin:5px 0; font-size:13px; color:#ddd;">${data[id].msg}</p>
-                            
-                            <div style="margin-top:10px;">
-                                <input type="text" id="reply-input-${id}" placeholder="Yanıtını yaz..." style="width:70%; padding:5px; font-size:11px;">
-                                <button class="btn login-btn" style="width:25%; padding:5px; margin:0; font-size:11px;" onclick="sendReply('${id}', '${data[id].user}', '${data[id].msg}')">Yanıtla</button>
-                            </div>
-                            
+                            <input type="text" id="reply-input-${id}" placeholder="Yanıtla..." style="width:65%; padding:5px; font-size:11px; margin-top:5px;">
+                            <button class="btn login-btn" style="width:30%; padding:5px; margin:0; font-size:11px;" onclick="sendReply('${id}', '${data[id].user}', '${data[id].msg}')">Yanıtla</button>
                             <button class="delete-small" style="width:100%; margin-top:5px; background:#444;" onclick="db.ref('suggestions/${id}').remove()">Mesajı Sil</button>
                         </div>`;
                 }
@@ -282,7 +283,6 @@
             showView('user-panel');
             document.getElementById('u-welcome').innerHTML = `SELAM, <span>${name.toUpperCase()}</span>`;
             
-            // Yanıtları dinle
             db.ref('replies').on('value', s => {
                 const container = document.getElementById('u-replies-container');
                 container.innerHTML = "";
@@ -319,7 +319,7 @@
             if(user === "Muart" && pass === "162124") return loadAdminPanel();
             db.ref('users/' + user).once('value').then(s => {
                 const ud = s.val();
-                if(ud && ud.password === pass) { currentUserName = user; loadUserPanel(user, ud.perms); } else alert("Hata!");
+                if(ud && ud.password === pass) { currentUserName = user; loadUserPanel(user, ud.perms || {}); } else alert("Hata!");
             });
         }
 
@@ -332,7 +332,7 @@
 
         function loginAsGuest() {
             currentUserName = "Misafir";
-            db.ref('users/Misafir_Giris/perms').once('value').then(s => loadUserPanel("Misafir", s.val()));
+            db.ref('users/Misafir_Giris/perms').once('value').then(s => loadUserPanel("Misafir", s.val() || {}));
         }
 
         function savePermissions() {
@@ -345,7 +345,4 @@
         }
 
         function sendSuggestion() {
-            const m = document.getElementById('suggestion-input').value.trim();
-            if(!m) return;
-            db.ref('suggestions/' + Date.now()).set({ 
-                user: currentUserName || "Anonim",
+            const m = document.getElementByI
