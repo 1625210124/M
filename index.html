@@ -55,7 +55,9 @@
         .download-btn { background: #28a745; color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; }
         
         .msg-box { background: rgba(125, 42, 232, 0.05); border: 1px solid #444; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: left; }
-        .reply-area { background: rgba(40, 167, 69, 0.1); border-left: 4px solid #28a745; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: left; }
+        
+        /* YENİ EKLENDİ: Yanıt Mesajı Stili */
+        .reply-card { background: rgba(40, 167, 69, 0.15); border-left: 4px solid #28a745; padding: 10px; margin-bottom: 15px; border-radius: 5px; text-align: left; }
     </style>
 </head>
 <body>
@@ -112,7 +114,7 @@
     <div id="user-panel" class="container hidden" style="width: 95%; max-width: 600px;">
         <h2 id="u-welcome" class="main-title">MUART <span>HUB</span></h2>
         
-        <div id="u-replies-container"></div>
+        <div id="u-replies-area"></div>
 
         <div class="suggestion-box" style="background:rgba(125,42,232,0.05); padding:15px; border-radius:15px; border:1px dotted #7d2ae8; margin-bottom:15px;">
             <p style="font-size:12px; color:#7d2ae8; margin-top:0; text-align:left;">Muart'a bir mesaj bırak...</p>
@@ -152,7 +154,7 @@
         let currentEditingUser = "";
         let currentUserName = "";
 
-        // Önce showView'ı tanımlıyoruz ki butonlar hata vermesin
+        // DÜZELTME: Bu fonksiyonu en başa aldık ki butonlar hemen çalışsın.
         function showView(id) { 
             document.querySelectorAll('.container').forEach(c => c.classList.add('hidden')); 
             document.getElementById(id).classList.remove('hidden');
@@ -211,26 +213,30 @@
                                 <span style="font-size:10px; color:#666;">${data[id].time || ''}</span>
                             </div>
                             <p style="margin:5px 0; font-size:13px; color:#ddd;">${data[id].msg}</p>
-                            <input type="text" id="reply-input-${id}" placeholder="Yanıtla..." style="width:65%; padding:5px; font-size:11px; margin-top:5px;">
-                            <button class="btn login-btn" style="width:30%; padding:5px; margin:0; font-size:11px;" onclick="sendReply('${id}', '${data[id].user}', '${data[id].msg}')">Yanıtla</button>
-                            <button class="delete-small" style="width:100%; margin-top:5px; background:#444;" onclick="db.ref('suggestions/${id}').remove()">Mesajı Sil</button>
+                            
+                            <div style="margin-top:5px; display:flex; gap:5px;">
+                                <input type="text" id="reply-${id}" placeholder="Yanıt yaz..." style="font-size:11px; padding:5px; margin:0; width:70%;">
+                                <button class="btn login-btn" style="padding:5px; margin:0; width:30%; font-size:11px;" onclick="sendReply('${id}', '${data[id].user}', '${data[id].msg}')">Yanıtla</button>
+                            </div>
+
+                            <button class="delete-small" style="width:100%; margin-top:10px;" onclick="db.ref('suggestions/${id}').remove()">Mesajı Sil</button>
                         </div>`;
                 }
             });
         }
 
+        // YENİ FONKSİYON: Admin Yanıt Gönderme
         function sendReply(msgId, targetUser, originalMsg) {
-            const replyText = document.getElementById('reply-input-' + msgId).value.trim();
+            const replyText = document.getElementById('reply-' + msgId).value.trim();
             if(!replyText) return;
             db.ref('replies').push({
                 targetUser: targetUser,
                 originalMsg: originalMsg,
                 reply: replyText,
                 time: new Date().toLocaleTimeString()
-            }).then(() => {
-                alert("Yanıt gönderildi!");
-                document.getElementById('reply-input-' + msgId).value = "";
             });
+            alert("Yanıt gönderildi.");
+            document.getElementById('reply-' + msgId).value = "";
         }
 
         function loadAdminPanel() {
@@ -283,18 +289,21 @@
             showView('user-panel');
             document.getElementById('u-welcome').innerHTML = `SELAM, <span>${name.toUpperCase()}</span>`;
             
+            // GÜNCELLEME: Yanıtları Dinle ve Göster
             db.ref('replies').on('value', s => {
-                const container = document.getElementById('u-replies-container');
-                container.innerHTML = "";
+                const rArea = document.getElementById('u-replies-area');
+                rArea.innerHTML = "";
                 const data = s.val();
-                for(let id in data) {
-                    if(data[id].targetUser === name) {
-                        container.innerHTML += `
-                            <div class="reply-area">
-                                <p style="font-size:11px; color:#888; margin:0;">"${data[id].originalMsg}" mesajına yanıt:</p>
-                                <p style="font-size:13px; color:#fff; margin:5px 0;"><strong>Muart:</strong> ${data[id].reply}</p>
-                                <button class="delete-small" style="background:#444; width:100%;" onclick="db.ref('replies/${id}').remove()">Bildirimi Kapat</button>
-                            </div>`;
+                if(data) {
+                    for(let id in data) {
+                        if(data[id].targetUser === name) {
+                            rArea.innerHTML += `
+                                <div class="reply-card">
+                                    <small style="color:#aaa;">Senin mesajın: "${data[id].originalMsg}"</small><br>
+                                    <strong style="color:#fff;">Muart:</strong> <span style="color:#fff;">${data[id].reply}</span>
+                                    <button class="delete-small" style="float:right; margin-top:-5px; background:none; color:#ddd;" onclick="db.ref('replies/${id}').remove()">✕</button>
+                                </div>`;
+                        }
                     }
                 }
             });
@@ -319,7 +328,7 @@
             if(user === "Muart" && pass === "162124") return loadAdminPanel();
             db.ref('users/' + user).once('value').then(s => {
                 const ud = s.val();
-                if(ud && ud.password === pass) { currentUserName = user; loadUserPanel(user, ud.perms || {}); } else alert("Hata!");
+                if(ud && ud.password === pass) { currentUserName = user; loadUserPanel(user, ud.perms); } else alert("Hata!");
             });
         }
 
@@ -332,7 +341,7 @@
 
         function loginAsGuest() {
             currentUserName = "Misafir";
-            db.ref('users/Misafir_Giris/perms').once('value').then(s => loadUserPanel("Misafir", s.val() || {}));
+            db.ref('users/Misafir_Giris/perms').once('value').then(s => loadUserPanel("Misafir", s.val()));
         }
 
         function savePermissions() {
@@ -345,4 +354,19 @@
         }
 
         function sendSuggestion() {
-            const m = document.getElementByI
+            const m = document.getElementById('suggestion-input').value.trim();
+            if(!m) return;
+            db.ref('suggestions/' + Date.now()).set({ 
+                user: currentUserName || "Anonim", 
+                msg: m, 
+                time: new Date().toLocaleTimeString() 
+            }).then(() => { 
+                alert("Mesajın iletildi!"); 
+                document.getElementById('suggestion-input').value = ""; 
+            });
+        }
+
+        function closeEdit() { document.getElementById('edit-modal').classList.add('hidden'); }
+    </script>
+</body>
+</html>
