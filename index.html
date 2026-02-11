@@ -43,7 +43,6 @@
         .hidden { display: none !important; }
         iframe { width: 100%; height: 350px; border-radius: 15px; border: none; margin-top: 10px; background: #000; }
         .delete-small { background: #ff4d4d; border: none; color: white; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 10px; }
-        .reply-btn { background: #7d2ae8; border: none; color: white; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 10px; margin-right: 5px; }
 
         .tab-buttons { display: flex; gap: 5px; margin: 15px 0; flex-wrap: wrap; }
         .tab-btn { flex: 1; min-width: 80px; padding: 10px 5px; border-radius: 10px; border: 1px solid #7d2ae8; background: transparent; color: white; cursor: pointer; font-size: 11px; transition: 0.3s; }
@@ -56,7 +55,6 @@
         .download-btn { background: #28a745; color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; }
         
         .msg-box { background: rgba(125, 42, 232, 0.05); border: 1px solid #444; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: left; }
-        .reply-box { background: rgba(40, 167, 69, 0.1); border: 1px solid #28a745; padding: 10px; border-radius: 10px; margin: 10px 0; text-align: left; border-left: 4px solid #28a745; }
     </style>
 </head>
 <body>
@@ -112,11 +110,6 @@
 
     <div id="user-panel" class="container hidden" style="width: 95%; max-width: 600px;">
         <h2 id="u-welcome" class="main-title">MUART <span>HUB</span></h2>
-
-        <div id="u-replies-area" class="hidden">
-            <p style="font-size:12px; color:#28a745; margin-bottom:5px; text-align:left; font-weight:bold;">📬 Muart'tan Gelen Yanıtlar</p>
-            <div id="u-replies-list"></div>
-        </div>
         
         <div class="suggestion-box" style="background:rgba(125,42,232,0.05); padding:15px; border-radius:15px; border:1px dotted #7d2ae8; margin-bottom:15px;">
             <p style="font-size:12px; color:#7d2ae8; margin-top:0; text-align:left;">Muart'a bir mesaj bırak...</p>
@@ -194,7 +187,6 @@
             alert("İçerik eklendi!");
         }
 
-        // ADMIN MESAJLARINI YÜKLE VE YANITLAMA
         function loadSuggestions() {
             db.ref('suggestions').on('value', s => {
                 const area = document.getElementById('admin-msgs');
@@ -209,32 +201,9 @@
                                 <span style="font-size:10px; color:#666;">${data[id].time || ''}</span>
                             </div>
                             <p style="margin:5px 0; font-size:13px; color:#ddd;">${data[id].msg}</p>
-                            <div id="reply-input-${id}" class="hidden" style="margin-top:10px;">
-                                <textarea id="text-reply-${id}" placeholder="Yanıtını yaz..." style="font-size:12px;"></textarea>
-                                <button class="btn login-btn" style="padding:5px; font-size:11px;" onclick="sendReply('${id}', '${data[id].user}', '${data[id].msg}')">Yanıtı Gönder</button>
-                            </div>
-                            <div style="display:flex; margin-top:5px;">
-                                <button class="reply-btn" onclick="document.getElementById('reply-input-${id}').classList.toggle('hidden')">Yanıtla</button>
-                                <button class="delete-small" style="flex:1;" onclick="db.ref('suggestions/${id}').remove()">Mesajı Sil</button>
-                            </div>
+                            <button class="delete-small" style="width:100%; margin-top:5px;" onclick="db.ref('suggestions/${id}').remove()">Mesajı Sil</button>
                         </div>`;
                 }
-            });
-        }
-
-        function sendReply(msgId, targetUser, originalMsg) {
-            const replyText = document.getElementById('text-reply-' + msgId).value.trim();
-            if(!replyText) return;
-            const replyData = {
-                targetUser: targetUser,
-                originalMsg: originalMsg,
-                reply: replyText,
-                time: new Date().toLocaleTimeString()
-            };
-            db.ref('replies').push(replyData).then(() => {
-                alert("Yanıt gönderildi!");
-                document.getElementById('text-reply-' + msgId).value = "";
-                document.getElementById('reply-input-' + msgId).classList.add('hidden');
             });
         }
 
@@ -271,32 +240,22 @@
             });
         }
 
+        function openEdit(u, perms) {
+            currentEditingUser = u;
+            db.ref('contents').once('value', s => {
+                const contents = s.val();
+                const pList = document.getElementById('permissions-list'); pList.innerHTML = "";
+                for(let id in contents) {
+                    const checked = (perms && perms[id]) ? "checked" : "";
+                    pList.innerHTML += `<div class="perm-item"><input type="checkbox" class="perm-check" data-id="${id}" ${checked}> <span>${contents[id].name}</span></div>`;
+                }
+                document.getElementById('edit-modal').classList.remove('hidden');
+            });
+        }
+
         function loadUserPanel(name, perms) {
             showView('user-panel');
             document.getElementById('u-welcome').innerHTML = `SELAM, <span>${name.toUpperCase()}</span>`;
-            
-            // KULLANICI YANITLARINI ÇEK
-            db.ref('replies').on('value', s => {
-                const list = document.getElementById('u-replies-list');
-                const area = document.getElementById('u-replies-area');
-                list.innerHTML = "";
-                let hasReply = false;
-                const data = s.val();
-                for(let id in data) {
-                    if(data[id].targetUser === currentUserName) {
-                        hasReply = true;
-                        list.innerHTML += `
-                            <div class="reply-box">
-                                <p style="font-size:11px; color:#888; margin-bottom:5px;">Sen: "${data[id].originalMsg}"</p>
-                                <p style="font-size:13px; color:#fff;"><strong>Muart:</strong> ${data[id].reply}</p>
-                                <p style="font-size:9px; color:#28a745; text-align:right; margin-top:5px;">${data[id].time}</p>
-                                <button class="delete-small" style="width:100%; margin-top:5px; background:#444;" onclick="db.ref('replies/${id}').remove()">Bildirimi Kapat</button>
-                            </div>`;
-                    }
-                }
-                if(hasReply) area.classList.remove('hidden'); else area.classList.add('hidden');
-            });
-
             db.ref('contents').on('value', s => {
                 const gArea = document.getElementById('u-gorseller');
                 const dArea = document.getElementById('u-dosyalar');
@@ -339,4 +298,28 @@
         }
 
         function updateInfo() {
-            db.ref('site_info').set({ anno
+            db.ref('site_info').set({ announcement: document.getElementById('input-announcement').value, admin_line: document.getElementById('input-admin-line').value });
+        }
+
+        function sendSuggestion() {
+            const m = document.getElementById('suggestion-input').value.trim();
+            if(!m) return;
+            db.ref('suggestions/' + Date.now()).set({ 
+                user: currentUserName || "Anonim", 
+                msg: m, 
+                time: new Date().toLocaleTimeString() 
+            }).then(() => { 
+                alert("Mesajın iletildi!"); 
+                document.getElementById('suggestion-input').value = ""; 
+            });
+        }
+
+        function closeEdit() { document.getElementById('edit-modal').classList.add('hidden'); }
+        function showView(id) { 
+            document.querySelectorAll('.container').forEach(c => c.classList.add('hidden')); 
+            document.getElementById(id).classList.remove('hidden');
+            if(id !== 'auth-screen') document.getElementById('global-logout').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
