@@ -23,7 +23,6 @@
             position: relative;
         }
 
-        /* ÇIKIŞ BUTONU SOL ÜST */
         .logout-top {
             position: fixed; top: 15px; left: 15px; z-index: 1000;
             background: #444; color: white; border: none; padding: 8px 15px;
@@ -45,20 +44,17 @@
         iframe { width: 100%; height: 350px; border-radius: 15px; border: none; margin-top: 10px; background: #000; }
         .delete-small { background: #ff4d4d; border: none; color: white; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 10px; }
 
-        /* SEKME SİSTEMİ */
-        .tab-buttons { display: flex; gap: 8px; margin: 15px 0; }
-        .tab-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #7d2ae8; background: transparent; color: white; cursor: pointer; font-size: 12px; transition: 0.3s; }
+        .tab-buttons { display: flex; gap: 5px; margin: 15px 0; flex-wrap: wrap; }
+        .tab-btn { flex: 1; min-width: 80px; padding: 10px 5px; border-radius: 10px; border: 1px solid #7d2ae8; background: transparent; color: white; cursor: pointer; font-size: 11px; transition: 0.3s; }
         .tab-btn.active { background: #7d2ae8; }
 
-        /* YETKİLER MODALI DÜZENİ */
-        .perm-item { 
-            display: flex; align-items: center; padding: 10px; 
-            border-bottom: 1px solid rgba(125, 42, 232, 0.2); 
-        }
+        .perm-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid rgba(125, 42, 232, 0.2); }
         .perm-item input { width: auto; margin-right: 15px; transform: scale(1.2); cursor: pointer; }
 
         .file-item { background: rgba(255,255,255,0.03); border: 1px solid #333; padding: 12px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
         .download-btn { background: #28a745; color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; }
+        
+        .msg-box { background: rgba(125, 42, 232, 0.05); border: 1px solid #444; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: left; }
     </style>
 </head>
 <body>
@@ -103,18 +99,21 @@
             <button id="admin-tab-img" class="tab-btn active" onclick="switchAdminTab('gorseller')">🖼️ Görseller</button>
             <button id="admin-tab-file" class="tab-btn" onclick="switchAdminTab('dosyalar')">📁 Dosyalar</button>
             <button id="admin-tab-users" class="tab-btn" onclick="switchAdminTab('users')">👥 Üyeler</button>
+            <button id="admin-tab-msgs" class="tab-btn" onclick="switchAdminTab('msgs')">📩 Mesajlar</button>
         </div>
 
         <div id="admin-gorseller" class="admin-tab-content"></div>
         <div id="admin-dosyalar" class="admin-tab-content hidden"></div>
         <div id="admin-users" class="admin-tab-content hidden"></div>
+        <div id="admin-msgs" class="admin-tab-content hidden"></div>
     </div>
 
     <div id="user-panel" class="container hidden" style="width: 95%; max-width: 600px;">
         <h2 id="u-welcome" class="main-title">MUART <span>HUB</span></h2>
         
-        <div class="suggestion-box">
-            <textarea id="suggestion-input" placeholder="Muart'a bir mesaj bırak..."></textarea>
+        <div class="suggestion-box" style="background:rgba(125,42,232,0.05); padding:15px; border-radius:15px; border:1px dotted #7d2ae8; margin-bottom:15px;">
+            <p style="font-size:12px; color:#7d2ae8; margin-top:0; text-align:left;">Muart'a bir mesaj bırak...</p>
+            <textarea id="suggestion-input" placeholder="Mesajını buraya yaz..."></textarea>
             <button class="btn login-btn" onclick="sendSuggestion()" style="width:100%; font-size:12px; padding:10px;">Mesajı Gönder</button>
         </div>
 
@@ -150,7 +149,6 @@
         let currentEditingUser = "";
         let currentUserName = "";
 
-        // SEKME GEÇİŞLERİ
         function switchAdminTab(t) {
             document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('#admin-panel .tab-btn').forEach(el => el.classList.remove('active'));
@@ -166,7 +164,6 @@
             document.getElementById('u-tab-' + t).classList.add('active');
         }
 
-        // FIREBASE İŞLEMLERİ
         db.ref('site_info').on('value', s => {
             const d = s.val();
             if(d) {
@@ -190,8 +187,29 @@
             alert("İçerik eklendi!");
         }
 
+        function loadSuggestions() {
+            db.ref('suggestions').on('value', s => {
+                const area = document.getElementById('admin-msgs');
+                area.innerHTML = "";
+                const data = s.val();
+                if(!data) { area.innerHTML = "<p style='color:#666;'>Mesaj yok.</p>"; return; }
+                for(let id in data) {
+                    area.innerHTML += `
+                        <div class="msg-box">
+                            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding-bottom:5px; margin-bottom:5px;">
+                                <strong style="color:#7d2ae8; font-size:12px;">${data[id].user}</strong>
+                                <span style="font-size:10px; color:#666;">${data[id].time || ''}</span>
+                            </div>
+                            <p style="margin:5px 0; font-size:13px; color:#ddd;">${data[id].msg}</p>
+                            <button class="delete-small" style="width:100%; margin-top:5px;" onclick="db.ref('suggestions/${id}').remove()">Mesajı Sil</button>
+                        </div>`;
+                }
+            });
+        }
+
         function loadAdminPanel() {
             showView('admin-panel');
+            loadSuggestions();
             db.ref('contents').on('value', s => {
                 const gArea = document.getElementById('admin-gorseller');
                 const dArea = document.getElementById('admin-dosyalar');
@@ -214,7 +232,7 @@
                     uList.innerHTML += `
                         <div class="user-card">
                             <div class="user-info" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
-                                <strong>${isGuest ? "⭐ GENEL MİSAFİR" : u}</strong>
+                                <strong>${isGuest ? "MİSAFİR" : u}</strong>
                             </div>
                             ${!isGuest ? `<button class="delete-small" onclick="db.ref('users/${u}').remove()">SİL</button>` : ''}
                         </div>`;
@@ -252,7 +270,6 @@
             });
         }
 
-        // TEMEL FONKSİYONLAR
         function handleLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -271,6 +288,7 @@
         }
 
         function loginAsGuest() {
+            currentUserName = "Misafir";
             db.ref('users/Misafir_Giris/perms').once('value').then(s => loadUserPanel("Misafir", s.val()));
         }
 
@@ -286,7 +304,14 @@
         function sendSuggestion() {
             const m = document.getElementById('suggestion-input').value.trim();
             if(!m) return;
-            db.ref('suggestions/' + Date.now()).set({ user: currentUserName || "Anonim", msg: m }).then(() => { alert("İletildi!"); document.getElementById('suggestion-input').value = ""; });
+            db.ref('suggestions/' + Date.now()).set({ 
+                user: currentUserName || "Anonim", 
+                msg: m, 
+                time: new Date().toLocaleTimeString() 
+            }).then(() => { 
+                alert("Mesajın iletildi!"); 
+                document.getElementById('suggestion-input').value = ""; 
+            });
         }
 
         function closeEdit() { document.getElementById('edit-modal').classList.add('hidden'); }
@@ -297,5 +322,4 @@
         }
     </script>
 </body>
-            </html>
-            
+</html>
