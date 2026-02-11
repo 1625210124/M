@@ -39,6 +39,15 @@
         .admin-line { margin-top: 10px; font-size: 11px; color: #777; letter-spacing: 1px; }
         
         .suggestion-box { background: rgba(125, 42, 232, 0.05); padding: 15px; border-radius: 15px; border: 1px dotted #7d2ae8; margin-top: 20px; }
+
+        /* YENİ EKLENEN STİLLER */
+        .tab-buttons { display: flex; gap: 10px; margin: 20px 0; }
+        .tab-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #7d2ae8; background: transparent; color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .tab-btn.active { background: #7d2ae8; }
+        
+        .file-list-container { text-align: left; }
+        .file-item { background: rgba(255,255,255,0.03); border: 1px solid #333; padding: 12px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .download-link { background: #28a745; color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -71,15 +80,19 @@
             <button class="btn login-btn" onclick="updateInfo()">Bilgileri Güncelle</button>
         </div>
 
-        <p style="font-size:12px; color:#7d2ae8;">📩 GELEN ÖNERİLER</p>
-        <div id="suggestion-list-admin" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;"></div>
-
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
             <p style="font-size:12px; margin:0 0 10px 0; color:#28a745;">YENİ İÇERİK EKLE</p>
             <input type="text" id="new-content-name" placeholder="İçerik Adı">
             <input type="text" id="new-content-link" placeholder="Google Drive Linki">
+            <select id="new-content-type" class="admin-input" style="width:95%; background:#000; color:white; padding:10px; border-radius:10px; margin-bottom:10px;">
+                <option value="image">Görsel İçerik (Iframe)</option>
+                <option value="file">Dosya (İndirme Linki)</option>
+            </select>
             <button class="btn add-btn" onclick="addNewContent()">Gönder</button>
         </div>
+
+        <p style="font-size:12px; color:#7d2ae8;">📩 GELEN ÖNERİLER</p>
+        <div id="suggestion-list-admin" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;"></div>
 
         <p style="font-size:12px; color:#888;">KULLANICILAR</p>
         <div id="user-list"></div>
@@ -96,7 +109,14 @@
             <button class="btn login-btn" onclick="sendSuggestion()" style="width:100%; font-size:12px; padding:8px;">Öneriyi Gönder</button>
         </div>
 
-        <div id="user-content-area"></div>
+        <div class="tab-buttons">
+            <button id="tab-img-btn" class="tab-btn active" onclick="switchTab('gorseller')">🖼️ Görseller</button>
+            <button id="tab-file-btn" class="tab-btn" onclick="switchTab('dosyalar')">📁 Dosyalar</button>
+        </div>
+
+        <div id="user-gorseller-area"></div>
+        <div id="user-dosyalar-area" class="hidden file-list-container"></div>
+
         <button class="btn register-btn" onclick="location.reload()" style="margin-top:20px;">Çıkış Yap</button>
     </div>
 
@@ -108,6 +128,7 @@
     </div>
 
     <script>
+        // FIREBASE AYARLARI (Senin Ayarların)
         const firebaseConfig = {
             apiKey: "AIzaSyAKy91n0Ib-Em_YDwwy8odQnrVXq5QFmqA",
             authDomain: "website-6bc19.firebaseapp.com",
@@ -122,6 +143,23 @@
 
         let currentEditingUser = "";
         let currentUserName = "";
+        let userPerms = {};
+
+        // SEKME DEĞİŞTİRME FONKSİYONU
+        function switchTab(tab) {
+            document.getElementById('user-gorseller-area').classList.add('hidden');
+            document.getElementById('user-dosyalar-area').classList.add('hidden');
+            document.getElementById('tab-img-btn').classList.remove('active');
+            document.getElementById('tab-file-btn').classList.remove('active');
+
+            if(tab === 'gorseller') {
+                document.getElementById('user-gorseller-area').classList.remove('hidden');
+                document.getElementById('tab-img-btn').classList.add('active');
+            } else {
+                document.getElementById('user-dosyalar-area').classList.remove('hidden');
+                document.getElementById('tab-file-btn').classList.add('active');
+            }
+        }
 
         // DUYURU VE ADMIN SATIRI
         db.ref('site_info').on('value', s => {
@@ -133,47 +171,27 @@
             }
         });
 
-        // ÖNERİ GÖNDERME (Kullanıcı)
         function sendSuggestion() {
             const text = document.getElementById('suggestion-input').value.trim();
             if(!text) return;
-            const sId = Date.now();
-            db.ref('suggestions/' + sId).set({
-                user: currentUserName,
-                msg: text,
-                time: new Date().toLocaleTimeString()
-            }).then(() => {
-                document.getElementById('suggestion-input').value = "";
-                alert("Önerin Muart'a ulaştı!");
-            });
+            db.ref('suggestions/' + Date.now()).set({ user: currentUserName, msg: text, time: new Date().toLocaleTimeString() })
+            .then(() => { document.getElementById('suggestion-input').value = ""; alert("Önerin ulaştı!"); });
         }
 
-        // ÖNERİLERİ LİSTELEME (Admin)
         function loadSuggestions() {
             db.ref('suggestions').on('value', s => {
                 const list = document.getElementById('suggestion-list-admin');
-                list.innerHTML = "";
-                const data = s.val();
+                list.innerHTML = ""; const data = s.val();
                 for(let id in data) {
-                    list.innerHTML += `
-                        <div class="user-card" style="flex-direction:column; align-items:flex-start; font-size:12px;">
-                            <div style="width:100%; display:flex; justify-content:space-between; border-bottom:1px solid #333; padding-bottom:5px; margin-bottom:5px;">
-                                <strong style="color:#7d2ae8;">${data[id].user}</strong>
-                                <span style="color:#555;">${data[id].time}</span>
-                            </div>
-                            <div style="text-align:left; color:#ccc;">${data[id].msg}</div>
-                            <button class="delete-small" onclick="deleteSuggestion('${id}')" style="margin-top:8px; align-self:flex-end;">Okundu / Sil</button>
-                        </div>
-                    `;
+                    list.innerHTML += `<div class="user-card" style="flex-direction:column; align-items:flex-start; font-size:12px;">
+                        <div style="width:100%; display:flex; justify-content:space-between; border-bottom:1px solid #333;">
+                            <strong style="color:#7d2ae8;">${data[id].user}</strong><span>${data[id].time}</span>
+                        </div><div style="color:#ccc;">${data[id].msg}</div>
+                        <button class="delete-small" onclick="db.ref('suggestions/${id}').remove()">SİL</button></div>`;
                 }
             });
         }
 
-        function deleteSuggestion(id) {
-            db.ref('suggestions/' + id).remove();
-        }
-
-        // DİĞER FONKSİYONLAR
         function updateInfo() {
             const ann = document.getElementById('input-announcement').value;
             const line = document.getElementById('input-admin-line').value;
@@ -183,37 +201,34 @@
         function addNewContent() {
             const name = document.getElementById('new-content-name').value;
             const link = document.getElementById('new-content-link').value;
+            const type = document.getElementById('new-content-type').value;
             if(!name || !link) return;
-            const match = link.match(/\/d\/(.+?)\//);
-            const cleanLink = match ? `https://drive.google.com/file/d/${match[1]}/preview` : link;
-            db.ref('contents/' + "item_" + Date.now()).set({ name: name, link: cleanLink });
+            
+            let finalLink = link;
+            if(type === 'image') {
+                const match = link.match(/\/d\/(.+?)\//);
+                finalLink = match ? `https://drive.google.com/file/d/${match[1]}/preview` : link;
+            }
+            
+            db.ref('contents/' + "item_" + Date.now()).set({ name: name, link: finalLink, type: type });
+            alert("Eklendi!");
         }
 
         function loadAdminPanel() {
             showView('admin-panel');
-            loadSuggestions(); // Önerileri yükle
+            loadSuggestions();
             db.ref('contents').on('value', s => {
                 const previewArea = document.getElementById('admin-preview-area');
-                previewArea.innerHTML = "";
-                const data = s.val();
+                previewArea.innerHTML = ""; const data = s.val();
                 for(let id in data) {
-                    previewArea.innerHTML += `<div style="margin-bottom:20px;background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;">
-                        <div class="user-card"><span>${data[id].name}</span><button class="delete-small" onclick="db.ref('contents/${id}').remove()">SİL</button></div>
-                        <iframe src="${data[id].link}"></iframe></div>`;
+                    previewArea.innerHTML += `<div class="user-card"><span>${data[id].name} (${data[id].type})</span><button class="delete-small" onclick="db.ref('contents/${id}').remove()">SİL</button></div>`;
                 }
             });
             db.ref('users').on('value', s => {
                 const uList = document.getElementById('user-list');
-                uList.innerHTML = "";
-                const users = s.val();
+                uList.innerHTML = ""; const users = s.val();
                 for(let u in users) {
-                    uList.innerHTML += `
-                        <div class="user-card">
-                            <div class="user-info" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'>
-                                <strong>${u === "Misafir_Giris" ? "⭐ GENEL MİSAFİR" : u}</strong>
-                            </div>
-                            ${u !== "Misafir_Giris" ? `<button class="delete-small" onclick="db.ref('users/${u}').remove()">SİL</button>` : ''}
-                        </div>`;
+                    uList.innerHTML += `<div class="user-card"><div class="user-info" onclick='openEdit("${u}", ${JSON.stringify(users[u].perms)})'><strong>${u}</strong></div><button class="delete-small" onclick="db.ref('users/${u}').remove()">SİL</button></div>`;
                 }
             });
         }
@@ -222,8 +237,7 @@
             currentEditingUser = username;
             db.ref('contents').once('value', s => {
                 const contents = s.val();
-                const pList = document.getElementById('permissions-list');
-                pList.innerHTML = "";
+                const pList = document.getElementById('permissions-list'); pList.innerHTML = "";
                 for(let id in contents) {
                     const checked = (perms && perms[id]) ? "checked" : "";
                     pList.innerHTML += `<label style="display:block; margin:10px;"><input type="checkbox" class="perm-check" data-id="${id}" ${checked}> ${contents[id].name}</label>`;
@@ -244,10 +258,7 @@
             if(user === "Muart" && pass === "162124") return loadAdminPanel();
             db.ref('users/' + user).once('value').then(s => {
                 const ud = s.val();
-                if(ud && ud.password === pass) {
-                    currentUserName = user;
-                    loadUserPanel(user, ud.perms);
-                } else alert("Hata!");
+                if(ud && ud.password === pass) { currentUserName = user; loadUserPanel(user, ud.perms); } else alert("Hata!");
             });
         }
 
@@ -266,15 +277,32 @@
         function loadUserPanel(name, perms) {
             showView('user-panel');
             document.getElementById('u-welcome').innerHTML = `SELAM, <span>${name.toUpperCase()}</span>`;
-            const area = document.getElementById('user-content-area');
-            area.innerHTML = "";
-            db.ref('contents').once('value').then(s => {
+            const gArea = document.getElementById('user-gorseller-area');
+            const dArea = document.getElementById('user-dosyalar-area');
+            gArea.innerHTML = ""; dArea.innerHTML = "";
+
+            db.ref('contents').on('value', s => {
                 const contents = s.val();
-                let found = false;
+                let gFound = false, dFound = false;
+                gArea.innerHTML = ""; dArea.innerHTML = "";
+                
                 for(let id in contents) {
-                    if(perms && perms[id]) { area.innerHTML += `<iframe src="${contents[id].link}"></iframe>`; found = true; }
+                    if(perms && perms[id]) {
+                        if(contents[id].type === 'image' || !contents[id].type) {
+                            gArea.innerHTML += `<iframe src="${contents[id].link}"></iframe>`;
+                            gFound = true;
+                        } else {
+                            dArea.innerHTML += `
+                                <div class="file-item">
+                                    <span>🎮 ${contents[id].name}</span>
+                                    <a href="${contents[id].link}" target="_blank" class="download-link">İNDİR 📥</a>
+                                </div>`;
+                            dFound = true;
+                        }
+                    }
                 }
-                if(!found) area.innerHTML = "<p style='color:#888; padding:50px;'>Adminden izin bekleyin.</p>";
+                if(!gFound) gArea.innerHTML = "<p style='color:#888; padding:20px;'>Görsel yetkiniz yok.</p>";
+                if(!dFound) dArea.innerHTML = "<p style='color:#888; padding:20px;'>Dosya yetkiniz yok.</p>";
             });
         }
 
@@ -282,5 +310,5 @@
         function showView(id) { document.querySelectorAll('.container').forEach(c => c.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
     </script>
 </body>
-    </html>
-    
+                                                                                                                                        </html>
+                                                                                                                                        
